@@ -1,20 +1,40 @@
+import { Editor } from '@/components/editor/Editor';
+import { editorStateFromRequest, type EditorState } from '@/lib/editor-types';
+
 export default function PreviewPage({ params }: { params: { id: string } }) {
-  return (
-    <main style={{ padding: '60px 5vw', minHeight: '100vh' }}>
-      <h1
-        style={{
-          fontFamily: 'var(--serif)',
-          fontSize: '48px',
-          color: 'var(--light)',
-          fontWeight: 300,
-          marginBottom: '20px',
-        }}
-      >
-        Preview {params.id}
-      </h1>
-      <p style={{ color: 'var(--text)', fontSize: '14px' }}>
-        Vista previa en construcción. Se implementa en Fase 7.
-      </p>
-    </main>
-  );
+  void params;
+  const exampleState: EditorState = editorStateFromRequest({
+    proyecto: {
+      nombre: 'Proyecto de ejemplo',
+      subtitulo: 'Subtítulo',
+      tagline: 'Tagline de marca',
+      descripcion: 'Esta es una descripción editable. Cambiala desde el panel.',
+      arquitecto: 'Arq. Demo',
+      estudio: 'Estudio Demo',
+      ubicacion: 'Tucumán, Argentina',
+      año: '2026',
+      estado: 'Proyecto ejecutivo',
+      email: 'demo@example.com',
+      telefono: '+54 381 555 1234',
+      direccion: 'Av. Demo 1234',
+      web: 'demo.com',
+      instagram: '@demo',
+      linkedin: 'https://linkedin.com/in/demo',
+      twitter: 'https://x.com/demo',
+      facebook: 'https://facebook.com/demo',
+    },
+    branding: {
+      empresa_nombre: 'Estudio Demo',
+      estilo: 'premium',
+      color_primario: '#C9A84C',
+      color_secundario: '#8a7434',
+      color_fondo: '#080808',
+      color_texto: '#ede9e0',
+      color_acento: '#E5C66B',
+    },
+    archivos: { galeria: [] },
+    opciones: {},
+  });
+
+  return <Editor initialState={exampleState} />;
 }
