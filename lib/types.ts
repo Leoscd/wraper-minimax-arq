@@ -70,6 +70,7 @@ export interface GenerationRequest {
   opciones?: {
     incluir_cronograma?: boolean;
     incluir_curva_inversion?: boolean;
+    incluir_honorarios?: boolean;
     duracion_estimada_meses?: number;
     honorarios?: number;
   };
