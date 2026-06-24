@@ -1,0 +1,66 @@
+{
+  "metadata": {
+    "nombre": "Rendimientos de Mano de Obra",
+    "version": "1.0",
+    "fuente": "SoyLeo AI skill original - rendimientos_materiales.md + incidencias_hormigon.md",
+    "actualizado": "2026-02",
+    "unidades": {
+      "oficial": "horas/unidad",
+      "ayudante": "horas/unidad"
+    }
+  },
+  "estructuras": {
+    "bases_ha": { "unidad": "m3", "oficial": 0.8, "ayudante": 4.0 },
+    "columnas": { "unidad": "m3", "oficial": 1.2, "ayudante": 5.0 },
+    "vigas": { "unidad": "m3", "oficial": 1.0, "ayudante": 4.5 },
+    "losas": { "unidad": "m3", "oficial": 1.5, "ayudante": 6.0 },
+    "cimientos_h_simple": { "unidad": "m3", "oficial": 0.8, "ayudante": 4.0 },
+    "armado_hierro_columnas": { "unidad": "kg", "oficial": 0.02, "ayudante": 0.05 },
+    "armado_hierro_vigas_losas": { "unidad": "kg", "oficial": 0.015, "ayudante": 0.04 },
+    "encofrado_desencofrado": { "unidad": "m2", "oficial": 0.5, "ayudante": 1.0 }
+  },
+  "albanileria": {
+    "mamposteria_ladrillo_hueco_12": { "unidad": "m2", "oficial": 0.8, "ayudante": 0.8 },
+    "mamposteria_ladrillo_hueco_18": { "unidad": "m2", "oficial": 1.0, "ayudante": 1.0 },
+    "mamposteria_ladrillo_comun_15": { "unidad": "m2", "oficial": 1.2, "ayudante": 1.2 },
+    "mamposteria_ladrillo_comun_30": { "unidad": "m2", "oficial": 1.8, "ayudante": 1.8 },
+    "mamposteria_bloque_hormigon_20": { "unidad": "m2", "oficial": 0.7, "ayudante": 0.7 },
+    "revoque_grueso_interior": { "unidad": "m2", "oficial": 0.5, "ayudante": 0.5 },
+    "revoque_grueso_exterior": { "unidad": "m2", "oficial": 0.6, "ayudante": 0.6 },
+    "revoque_fino_interior": { "unidad": "m2", "oficial": 0.35, "ayudante": 0.35 },
+    "revoque_fino_exterior": { "unidad": "m2", "oficial": 0.45, "ayudante": 0.45 }
+  },
+  "pisos_revestimientos": {
+    "contrapiso_8_12cm": { "unidad": "m2", "oficial": 0.3, "ayudante": 0.6 },
+    "carpeta_cementicia": { "unidad": "m2", "oficial": 0.25, "ayudante": 0.25 },
+    "colocacion_ceramicos_porcellanato": { "unidad": "m2", "oficial": 0.6, "ayudante": 0.3 },
+    "colocacion_ceramicos_grandes": { "unidad": "m2", "oficial": 0.7, "ayudante": 0.35 },
+    "colocacion_revestimientos_pared": { "unidad": "m2", "oficial": 0.7, "ayudante": 0.35 },
+    "colocacion_zocalos": { "unidad": "ml", "oficial": 0.2, "ayudante": 0.1 },
+    "colocacion_mosaicos_calc": { "unidad": "m2", "oficial": 0.5, "ayudante": 0.25 }
+  },
+  "aislaciones_cubiertas": {
+    "capa_aisladora_pintura_asfaltica": { "unidad": "m2", "oficial": 0.15, "ayudante": 0.15 },
+    "membrana_asfaltica": { "unidad": "m2", "oficial": 0.2, "ayudante": 0.2 },
+    "aislacion_termica_eps_muros": { "unidad": "m2", "oficial": 0.15, "ayudante": 0.15 },
+    "aislacion_termica_lana_vidrio_techos": { "unidad": "m2", "oficial": 0.1, "ayudante": 0.1 },
+    "cubierta_chapas": { "unidad": "m2", "oficial": 0.4, "ayudante": 0.4 },
+    "cubierta_tejas_coloniales": { "unidad": "m2", "oficial": 0.5, "ayudante": 0.5 },
+    "cielorraso_durlock": { "unidad": "m2", "oficial": 0.6, "ayudante": 0.4 },
+    "cielorraso_aplicado": { "unidad": "m2", "oficial": 0.45, "ayudante": 0.45 }
+  },
+  "pintura": {
+    "pintura_latex_interior_mano": { "unidad": "m2", "oficial": 0.08, "ayudante": 0.04 },
+    "pintura_latex_exterior_mano": { "unidad": "m2", "oficial": 0.1, "ayudante": 0.05 },
+    "enduido_masilla_preparacion": { "unidad": "m2", "oficial": 0.12, "ayudante": 0.06 },
+    "esmalte_sintetico_mano": { "unidad": "m2", "oficial": 0.15, "ayudante": 0.05 },
+    "barniz_mano": { "unidad": "m2", "oficial": 0.1, "ayudante": 0.03 }
+  },
+  "varios": {
+    "excavacion_manual": { "unidad": "m3", "oficial": 0.8, "ayudante": 4.0 },
+    "relleno_compactacion": { "unidad": "m3", "oficial": 0.3, "ayudante": 1.5 },
+    "demolicion_mamposteria": { "unidad": "m2", "oficial": 0.4, "ayudante": 0.8 },
+    "limpieza_terreno": { "unidad": "m2", "oficial": 0.02, "ayudante": 0.1 },
+    "colocacion_carpinteria": { "unidad": "u", "oficial": 1.5, "ayudante": 1.0 }
+  }
+}

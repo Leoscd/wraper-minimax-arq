@@ -1,0 +1,33 @@
+{
+  "metadata": {
+    "nombre": "Coeficientes de Desperdicio Diferenciados",
+    "version": "1.0",
+    "fuente": "SoyLeo AI skill original - rendimientos_materiales.md",
+    "actualizado": "2026-02"
+  },
+  "factores": {
+    "hormigon_elaborado": { "desperdicio_pct": "3-5", "factor": 1.05, "motivo": "Derrame en transporte/colado" },
+    "hormigon_in_situ": { "desperdicio_pct": "5-8", "factor": 1.08, "motivo": "Encofrados irregulares" },
+    "acero_barras": { "desperdicio_pct": "5-8", "factor": 1.08, "motivo": "Cortes, empalmes, doblado" },
+    "cemento_bolsas": { "desperdicio_pct": "3-5", "factor": 1.05, "motivo": "Rotura, humedad" },
+    "arena_ripio": { "desperdicio_pct": "5-8", "factor": 1.08, "motivo": "Contaminación, derrame" },
+    "ladrillos_huecos": { "desperdicio_pct": "5-7", "factor": 1.07, "motivo": "Rotura en transporte/manipulación" },
+    "ladrillos_comunes": { "desperdicio_pct": "5-7", "factor": 1.07, "motivo": "Rotura, irregularidades" },
+    "bloques_hormigon": { "desperdicio_pct": "3-5", "factor": 1.05, "motivo": "Menos frágiles" },
+    "mortero_plasticor": { "desperdicio_pct": "10-15", "factor": 1.12, "motivo": "Rebaba, caída, desperdicio en mezclado" },
+    "ceramicos_porcellanato": { "desperdicio_pct": "10-15", "factor": 1.12, "motivo": "Cortes en bordes y esquinas" },
+    "ceramicos_diagonal": { "desperdicio_pct": "15-20", "factor": 1.18, "motivo": "Mayor cantidad de cortes" },
+    "adhesivo_pisos": { "desperdicio_pct": "8-10", "factor": 1.10, "motivo": "Variación espesor, desperdicio" },
+    "pastina_junta": { "desperdicio_pct": "10-15", "factor": 1.12, "motivo": "Limpieza, exceso en juntas" },
+    "pintura": { "desperdicio_pct": "3-5", "factor": 1.05, "motivo": "Absorción variable del sustrato" },
+    "membrana_asfaltica": { "desperdicio_pct": "8-10", "factor": 1.10, "motivo": "Solapes (mínimo 10cm)" },
+    "pintura_asfaltica": { "desperdicio_pct": "5-8", "factor": 1.08, "motivo": "Absorción del sustrato" },
+    "aislacion_termica_eps": { "desperdicio_pct": "5-8", "factor": 1.08, "motivo": "Cortes, ajustes" },
+    "lana_vidrio": { "desperdicio_pct": "5-8", "factor": 1.08, "motivo": "Cortes, ajustes" },
+    "chapas": { "desperdicio_pct": "3-5", "factor": 1.05, "motivo": "Cortes en bordes" },
+    "tejas": { "desperdicio_pct": "5-8", "factor": 1.08, "motivo": "Rotura, cortes" },
+    "canerias_pvc_ppf": { "desperdicio_pct": "5-8", "factor": 1.08, "motivo": "Cortes, empalmes" },
+    "cables_electricos": { "desperdicio_pct": "5-10", "factor": 1.08, "motivo": "Recorridos, curvas" }
+  },
+  "regla": "Cantidad final = Cantidad calculada × Factor. Usar valor bajo (factor) para obra prolija, operarios experimentados. Valor alto para geometría irregular o condiciones difíciles."
+}

@@ -1,0 +1,73 @@
+{
+  "metadata": {
+    "nombre": "Tabla de Hormigón Armado - Dosis y Usos",
+    "version": "1.0",
+    "fuente": "SoyLeo AI skill original - SKILL.md + incidencias_hormigon.md",
+    "actualizado": "2026-02"
+  },
+  "clases": [
+    {
+      "clase": "H-13",
+      "cemento_kg_m3": 200,
+      "arena_gruesa_m3_m3": 0.49,
+      "ripio_m3_m3": 0.68,
+      "agua_litros_m3": 180,
+      "relacion_a_c": 0.6,
+      "uso": "Hormigón de limpieza, rellenos",
+      "factor_desperdicio_default": 1.05,
+      "apto_bomba": false
+    },
+    {
+      "clase": "H-17",
+      "cemento_kg_m3": 250,
+      "arena_gruesa_m3_m3": 0.50,
+      "ripio_m3_m3": 0.70,
+      "agua_litros_m3": 185,
+      "relacion_a_c": 0.59,
+      "uso": "Cimientos simples, veredas, contrapisos",
+      "factor_desperdicio_default": 1.05,
+      "apto_bomba": true
+    },
+    {
+      "clase": "H-21",
+      "cemento_kg_m3": 320,
+      "arena_gruesa_m3_m3": 0.52,
+      "ripio_m3_m3": 0.72,
+      "agua_litros_m3": 190,
+      "relacion_a_c": 0.59,
+      "uso": "Estructuras estándar (bases, columnas, vigas, losas)",
+      "factor_desperdicio_default": 1.05,
+      "apto_bomba": true,
+      "default": true
+    },
+    {
+      "clase": "H-25",
+      "cemento_kg_m3": 350,
+      "arena_gruesa_m3_m3": 0.50,
+      "ripio_m3_m3": 0.70,
+      "agua_litros_m3": 185,
+      "relacion_a_c": 0.53,
+      "uso": "Estructuras con mayores solicitaciones",
+      "factor_desperdicio_default": 1.05,
+      "apto_bomba": true
+    },
+    {
+      "clase": "H-30",
+      "cemento_kg_m3": 400,
+      "arena_gruesa_m3_m3": 0.48,
+      "ripio_m3_m3": 0.67,
+      "agua_litros_m3": 180,
+      "relacion_a_c": 0.45,
+      "uso": "Estructuras especiales, pilotes, tanques",
+      "factor_desperdicio_default": 1.05,
+      "apto_bomba": true
+    }
+  ],
+  "notas": [
+    "Valores de agua para áridos saturados superficialmente secos.",
+    "Si áridos secos: +10 l/m³. Si húmedos: -10 l/m³.",
+    "Si se usa BOMBA: +10% cemento y árido máximo 19mm.",
+    "Factor de desperdicio default 1.05 (5%). Para hormigón in situ usar 1.08.",
+    "Por defecto usar H-21 si el usuario no especifica."
+  ]
+}

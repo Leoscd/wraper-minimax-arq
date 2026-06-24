@@ -1,0 +1,39 @@
+{
+  "metadata": {
+    "nombre": "Clasificación de Rubros de Construcción",
+    "version": "1.0",
+    "fuente": "SoyLeo AI skill original - rubros_construccion.md",
+    "actualizado": "2026-02"
+  },
+  "rubros": [
+    { "numero": "01", "nombre": "Trabajos Preparatorios", "orden": 1 },
+    { "numero": "02", "nombre": "Movimiento de Tierra", "orden": 2 },
+    { "numero": "03", "nombre": "Cimientos", "orden": 3 },
+    { "numero": "04", "nombre": "Estructuras", "orden": 4 },
+    { "numero": "05", "nombre": "Mamposterías", "orden": 5 },
+    { "numero": "06", "nombre": "Capas Aisladoras", "orden": 6 },
+    { "numero": "07", "nombre": "Revoques", "orden": 7 },
+    { "numero": "08", "nombre": "Contrapisos y Carpetas", "orden": 8 },
+    { "numero": "09", "nombre": "Revestimientos", "orden": 9 },
+    { "numero": "10", "nombre": "Cielorrasos", "orden": 10 },
+    { "numero": "11", "nombre": "Pisos", "orden": 11 },
+    { "numero": "12", "nombre": "Zócalos", "orden": 12 },
+    { "numero": "13", "nombre": "Aislaciones", "orden": 13 },
+    { "numero": "14", "nombre": "Cubiertas", "orden": 14 },
+    { "numero": "15", "nombre": "Carpintería de Madera", "orden": 15 },
+    { "numero": "16", "nombre": "Carpintería Metálica", "orden": 16 },
+    { "numero": "17", "nombre": "Carpintería de Aluminio", "orden": 17 },
+    { "numero": "18", "nombre": "Vidrios y Cristales", "orden": 18 },
+    { "numero": "19", "nombre": "Instalación Sanitaria", "orden": 19 },
+    { "numero": "20", "nombre": "Instalación Eléctrica", "orden": 20 },
+    { "numero": "21", "nombre": "Instalación de Gas", "orden": 21 },
+    { "numero": "22", "nombre": "Pinturas", "orden": 22 },
+    { "numero": "23", "nombre": "Terminaciones Especiales", "orden": 23 },
+    { "numero": "24", "nombre": "Instalaciones Especiales", "orden": 24 },
+    { "numero": "25", "nombre": "Varios y Limpieza Final", "orden": 25 }
+  ],
+  "notas": [
+    "Los rubros siguen el orden cronológico natural de construcción.",
+    "Dentro de cada rubro, ordenar ítems por complejidad, ubicación (fundaciones hacia arriba) y tamaño."
+  ]
+}

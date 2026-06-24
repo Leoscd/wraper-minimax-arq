@@ -13,22 +13,23 @@
     "test:run": "vitest run"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.1",
+    "@vercel/blob": "^0.27.0",
     "next": "14.2.18",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "@anthropic-ai/sdk": "^0.32.1",
-    "@vercel/blob": "^0.27.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
-    "typescript": "^5.7.2",
+    "@vitest/ui": "^2.1.8",
     "eslint": "^8.57.1",
     "eslint-config-next": "14.2.18",
-    "vitest": "^2.1.8",
-    "@vitest/ui": "^2.1.8"
+    "tsx": "^4.22.4",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
   },
   "engines": {
     "node": ">=18.17.0"
