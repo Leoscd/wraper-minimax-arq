@@ -1,0 +1,36 @@
+{
+  "name": "soyleoai-presentador",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Wrapper web de MiniMax M3 para generar presentaciones arquitectónicas con la metodología SoyLeo AI",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest",
+    "test:run": "vitest run"
+  },
+  "dependencies": {
+    "next": "14.2.18",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "@anthropic-ai/sdk": "^0.32.1",
+    "@vercel/blob": "^0.27.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "typescript": "^5.7.2",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "14.2.18",
+    "vitest": "^2.1.8",
+    "@vitest/ui": "^2.1.8"
+  },
+  "engines": {
+    "node": ">=18.17.0"
+  }
+}
