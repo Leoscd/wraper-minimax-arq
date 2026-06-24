@@ -146,8 +146,8 @@ const schema: Anthropic.Tool = {
 };
 
 export const calcularHierroLongitudinalTool: Tool<HierroInput, HierroOutput> = {
-  name: schema.name,
-  description: schema.description,
+  name: schema.name!,
+  description: schema.description!,
   schema,
   execute: calcular,
 };

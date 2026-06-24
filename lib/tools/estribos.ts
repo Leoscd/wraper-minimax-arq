@@ -171,8 +171,8 @@ const schema: Anthropic.Tool = {
 };
 
 export const calcularEstribosTool: Tool<EstribosInput, EstribosOutput> = {
-  name: schema.name,
-  description: schema.description,
+  name: schema.name!,
+  description: schema.description!,
   schema,
   execute: calcular,
 };

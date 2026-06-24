@@ -100,8 +100,8 @@ const schema: Anthropic.Tool = {
 };
 
 export const buscarPrecioTool: Tool<BuscarPrecioInput, BuscarPrecioOutput> = {
-  name: schema.name,
-  description: schema.description,
+  name: schema.name!,
+  description: schema.description!,
   schema,
   execute: calcular,
 };

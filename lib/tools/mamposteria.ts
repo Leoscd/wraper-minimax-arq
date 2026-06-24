@@ -81,8 +81,8 @@ const schema: Anthropic.Tool = {
 };
 
 export const calcularMamposteriaTool: Tool<MamposteriaInput, MamposteriaOutput> = {
-  name: schema.name,
-  description: schema.description,
+  name: schema.name!,
+  description: schema.description!,
   schema,
   execute: calcular,
 };

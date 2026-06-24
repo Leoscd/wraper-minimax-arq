@@ -13,7 +13,7 @@ import type { Tool, DesperdicioInput, DesperdicioOutput } from './types';
 import desperdiciosData from '../../data/desperdicios.json';
 
 const FACTORES: Record<string, { factor: number; pct: string; motivo: string }> =
-  desperdiciosData.factores as Record<
+  desperdiciosData.factores as unknown as Record<
     string,
     { factor: number; pct: string; motivo: string }
   >;
@@ -112,8 +112,8 @@ const schema: Anthropic.Tool = {
 };
 
 export const aplicarDesperdicioTool: Tool<DesperdicioInput, DesperdicioOutput> = {
-  name: schema.name,
-  description: schema.description,
+  name: schema.name!,
+  description: schema.description!,
   schema,
   execute: calcular,
 };

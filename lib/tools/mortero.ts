@@ -143,8 +143,8 @@ const schema: Anthropic.Tool = {
 };
 
 export const calcularMorteroRevoqueTool: Tool<MorteroInput, MorteroOutput> = {
-  name: schema.name,
-  description: schema.description,
+  name: schema.name!,
+  description: schema.description!,
   schema,
   execute: calcular,
 };

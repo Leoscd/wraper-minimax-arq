@@ -148,8 +148,8 @@ const schema: Anthropic.Tool = {
 };
 
 export const calcularHormigonTool: Tool<HormigonInput, HormigonOutput> = {
-  name: schema.name,
-  description: schema.description,
+  name: schema.name!,
+  description: schema.description!,
   schema,
   execute: calcular,
 };

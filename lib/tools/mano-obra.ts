@@ -181,8 +181,8 @@ const schema: Anthropic.Tool = {
 };
 
 export const calcularManoObraTool: Tool<ManoObraInput, ManoObraOutput> = {
-  name: schema.name,
-  description: schema.description,
+  name: schema.name!,
+  description: schema.description!,
   schema,
   execute: calcular,
 };
