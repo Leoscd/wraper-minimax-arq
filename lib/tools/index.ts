@@ -2,19 +2,56 @@
  * Tools (function calling) determinísticas.
  *
  * Cada tool encapsula un cálculo de la metodología SoyLeo AI para que
- * M3 NUNCA calcule a mano. Se registran en Fase 2.
+ * M3 NUNCA calcule a mano. M3 las invoca via function calling.
  *
- * Estructura planeada:
+ * Tools implementadas:
  * - hormigon.ts: H-13 a H-30 con dosificación
  * - hierro.ts: barras longitudinales + empalmes
- * - estribos.ts: fórmula CIRSOC corregida
- * - mortero.ts: Plasticor para revoques
- * - mamposteria.ts: ladrillos por m²
- * - precios.ts: búsqueda en CSV
+ * - estribos.ts: fórmula CIRSOC corregida con ganchos
+ * - mortero.ts: Plasticor para revoques y contrapisos
+ * - mamposteria.ts: ladrillos por m² (5 tipos)
+ * - precios.ts: búsqueda en CSV de NOA (825 items)
  * - mano-obra.ts: oficial + ayudante + cargas sociales
- * - desperdicios.ts: factores diferenciados
- * - cronograma.ts: CPM
- * - curva.ts: curva S
+ * - desperdicios.ts: factores DIFERENCIADOS por material
+ *
+ * Por implementar:
+ * - cronograma.ts: CPM con camino crítico
+ * - curva.ts: curva S de inversión
  */
 
-export {};
+export * from './types';
+export * from './registry';
+export {
+  calcularHormigon,
+  calcularHormigonTool,
+} from './hormigon';
+export {
+  calcularHierroLongitudinal,
+  calcularHierroLongitudinalTool,
+} from './hierro';
+export {
+  calcularEstribos,
+  calcularEstribosTool,
+} from './estribos';
+export {
+  calcularMorteroRevoque,
+  calcularMorteroRevoqueTool,
+} from './mortero';
+export {
+  calcularMamposteria,
+  calcularMamposteriaTool,
+} from './mamposteria';
+export {
+  buscarPrecio,
+  buscarPrecioTool,
+} from './precios';
+export {
+  calcularManoObra,
+  calcularManoObraTool,
+  CARGAS_SOCIALES_REFERENCIA,
+} from './mano-obra';
+export {
+  aplicarDesperdicio,
+  aplicarDesperdicioTool,
+  MATERIALES_VALIDOS,
+} from './desperdicios';
