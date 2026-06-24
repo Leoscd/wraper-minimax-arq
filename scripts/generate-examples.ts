@@ -18,6 +18,7 @@ const casaRogeris: PresentacionData = {
   proyecto: {
     nombre: 'Casa Rogeris',
     subtitulo: 'Complejo 4 Departamentos — Steel Frame',
+    tagline: 'Arquitectura que transforma',
     descripcion:
       'Desarrollo de tipología residencial colectiva en sistema Steel Frame. El proyecto optimiza 193 m² totales divididos en 4 unidades funcionales de 42 m² cada una, conectadas por una pasarela y escalera metálica de diseño industrial.',
     arquitecto: 'Arq. Leonardo Díaz',
@@ -31,8 +32,13 @@ const casaRogeris: PresentacionData = {
     año: '2025',
     estado: 'Proyecto ejecutivo',
     email: 'soyleo.ai.arq@gmail.com',
+    telefono: '+54 381 555 1234',
+    direccion: 'Av. Independencia 1234, San Miguel de Tucumán',
     web: 'soyleoai.com',
     instagram: '@soy.leo_ai',
+    linkedin: 'https://linkedin.com/in/soyleoai',
+    twitter: 'https://x.com/soy_leo_ai',
+    facebook: 'https://facebook.com/soyleoai',
   },
   archivos: {
     galeria: [
@@ -44,8 +50,13 @@ const casaRogeris: PresentacionData = {
   },
   branding: {
     empresa_nombre: 'SoyLeo AI',
+    logo_url: 'https://placehold.co/200x60/C9A84C/080808?text=SOYLEO+AI',
     estilo: 'premium',
     color_primario: '#C9A84C',
+    color_secundario: '#8a7434',
+    color_fondo: '#080808',
+    color_texto: '#ede9e0',
+    color_acento: '#E5C66B',
   },
   rubros: {
     rubros: [

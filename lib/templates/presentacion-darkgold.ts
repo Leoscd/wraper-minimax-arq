@@ -39,12 +39,46 @@ function escapeHtml(s: string): string {
     .replace(/'/g, '&#39;');
 }
 
+function hexToRgba(hex: string, alpha: number): string {
+  const clean = hex.replace('#', '');
+  const r = parseInt(clean.substring(0, 2), 16);
+  const g = parseInt(clean.substring(2, 4), 16);
+  const b = parseInt(clean.substring(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function socialIcon(name: string): string {
+  const icons: Record<string, string> = {
+    instagram: '<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>',
+    linkedin: '<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.063 2.063 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>',
+    twitter: '<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>',
+    facebook: '<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>',
+    email: '<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>',
+    web: '<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>',
+    telefono: '<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>',
+    direccion: '<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z"/></svg>',
+  };
+  return icons[name] || '';
+}
+
 export function renderPresentacionDarkGold(data: PresentacionData): string {
   const { proyecto, archivos, branding, rubros } = data;
   const gold = branding.color_primario || GOLD;
+  const gold2 = branding.color_secundario || '#8a7434';
+  const goldAccent = branding.color_acento || '#E5C66B';
+  const fondo = branding.color_fondo || DARK;
+  const texto = branding.color_texto || '#ede9e0';
+
+  const goldDim = hexToRgba(gold, 0.12);
+  const goldMid = hexToRgba(gold, 0.35);
+
   const logoHtml = branding.logo_url
     ? `<img src="${escapeHtml(branding.logo_url)}" alt="${escapeHtml(branding.empresa_nombre)}" class="logo" />`
     : `<span class="logo-text">${escapeHtml(branding.empresa_nombre)}</span>`;
+
+  const taglineHtml = proyecto.tagline
+    ? `<span class="nav-tagline">${escapeHtml(proyecto.tagline)}</span>`
+    : '';
 
   const videoHtml = archivos.video_hero
     ? `<video class="hero-video" autoplay muted loop playsinline>
@@ -151,15 +185,17 @@ export function renderPresentacionDarkGold(data: PresentacionData): string {
 <style>
   :root {
     --gold: ${gold};
-    --gold-dim: ${gold}1e;
-    --gold-mid: ${gold}59;
-    --dark: ${DARK};
-    --dark-2: #0f0f0f;
-    --dark-3: #161616;
-    --dark-4: #1e1e1e;
-    --light: #ede9e0;
-    --light-dim: #ede9e08c;
-    --text: #cac6be;
+    --gold-2: ${gold2};
+    --gold-accent: ${goldAccent};
+    --gold-dim: ${goldDim};
+    --gold-mid: ${goldMid};
+    --dark: ${fondo};
+    --dark-2: ${hexToRgba(fondo, 0.95)};
+    --dark-3: ${hexToRgba(fondo, 0.88)};
+    --dark-4: ${hexToRgba(fondo, 0.78)};
+    --light: ${texto};
+    --light-dim: ${hexToRgba(texto, 0.55)};
+    --text: ${hexToRgba(texto, 0.78)};
     --serif: 'Cormorant Garamond', Georgia, serif;
     --mono: 'DM Mono', monospace;
   }
@@ -180,7 +216,7 @@ export function renderPresentacionDarkGold(data: PresentacionData): string {
     position: fixed; top: 0; left: 0; right: 0; z-index: 200;
     display: flex; justify-content: space-between; align-items: center;
     padding: 20px 5vw;
-    background: linear-gradient(to bottom, rgba(8,8,8,0.92) 0%, transparent 100%);
+    background: linear-gradient(to bottom, var(--dark) 0%, transparent 100%);
     backdrop-filter: blur(2px);
   }
   .nav-brand {
@@ -189,6 +225,11 @@ export function renderPresentacionDarkGold(data: PresentacionData): string {
     color: var(--light); letter-spacing: 0.5px;
   }
   .nav-brand em { font-style: italic; color: var(--gold); }
+  .nav-tagline {
+    font-size: 9px; letter-spacing: 2.5px; text-transform: uppercase;
+    color: var(--light-dim); margin-left: 12px;
+    border-left: 1px solid var(--gold-mid); padding-left: 12px;
+  }
   .logo { height: 32px; width: auto; }
   .logo-text { font-family: var(--serif); font-size: 18px; }
   .nav-links { display: flex; gap: 28px; list-style: none; }
@@ -339,14 +380,46 @@ export function renderPresentacionDarkGold(data: PresentacionData): string {
   footer {
     padding: 60px 5vw 40px;
     border-top: 1px solid rgba(201,168,76,0.1);
+  }
+  .footer-grid {
+    display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 60px;
+    max-width: 1200px; margin: 0 auto;
+  }
+  .footer-brand {
+    font-family: var(--serif); font-size: 24px; color: var(--light);
+    margin-bottom: 8px;
+  }
+  .footer-brand em { font-style: italic; color: var(--gold); }
+  .footer-tagline {
+    font-size: 11px; color: var(--text);
+    line-height: 1.6; max-width: 320px;
+  }
+  .footer-section-title {
+    font-size: 9px; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--gold); margin-bottom: 16px; display: block;
+  }
+  .footer-contact-item {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 8px; font-size: 11px; color: var(--text);
+  }
+  .footer-contact-item svg { color: var(--gold); flex-shrink: 0; }
+  .footer-social {
+    display: flex; gap: 12px; flex-wrap: wrap;
+  }
+  .footer-social a {
+    display: flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px;
+    border: 1px solid var(--gold-mid);
+    color: var(--gold);
+    transition: all 0.2s;
+  }
+  .footer-social a:hover {
+    background: var(--gold); color: var(--dark);
+  }
+  .footer-bottom {
+    margin-top: 40px; padding-top: 20px;
+    border-top: 1px solid rgba(201,168,76,0.1);
     text-align: center;
-  }
-  .footer-content {
-    font-family: var(--serif); font-size: 20px; color: var(--light);
-    margin-bottom: 12px;
-  }
-  .footer-content em { font-style: italic; color: var(--gold); }
-  .footer-meta {
     font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
     color: var(--text-muted);
   }
@@ -356,6 +429,8 @@ export function renderPresentacionDarkGold(data: PresentacionData): string {
     .proyecto-grid, .presupuesto-grid, .proyecto-meta { grid-template-columns: 1fr; gap: 32px; }
     .gallery-item { flex: 0 0 90vw; }
     section { padding: 60px 6vw; }
+    .footer-grid { grid-template-columns: 1fr; gap: 32px; }
+    .nav-tagline { display: none; }
   }
 
   /* PRINT */
@@ -375,6 +450,7 @@ export function renderPresentacionDarkGold(data: PresentacionData): string {
   <div class="nav-brand">
     ${logoHtml}
     <em>${escapeHtml(branding.empresa_nombre)}</em>
+    ${taglineHtml}
   </div>
   <ul class="nav-links">
     <li><a href="#proyecto">Proyecto</a></li>
@@ -467,12 +543,36 @@ ${
 ${rubrosHtml}
 
 <footer id="contacto">
-  <div class="footer-content">
-    ${escapeHtml(proyecto.arquitecto)}<br>
-    <em>${escapeHtml(branding.empresa_nombre)}</em>
+  <div class="footer-grid">
+    <div>
+      <div class="footer-brand">
+        ${escapeHtml(proyecto.arquitecto)}<br>
+        <em>${escapeHtml(branding.empresa_nombre)}</em>
+      </div>
+      ${proyecto.tagline ? `<p class="footer-tagline">${escapeHtml(proyecto.tagline)}</p>` : ''}
+    </div>
+
+    <div>
+      <span class="footer-section-title">Contacto</span>
+      ${proyecto.email ? `<div class="footer-contact-item">${socialIcon('email')}<a href="mailto:${escapeHtml(proyecto.email)}">${escapeHtml(proyecto.email)}</a></div>` : ''}
+      ${proyecto.telefono ? `<div class="footer-contact-item">${socialIcon('telefono')}<a href="tel:${escapeHtml(proyecto.telefono)}">${escapeHtml(proyecto.telefono)}</a></div>` : ''}
+      ${proyecto.direccion ? `<div class="footer-contact-item">${socialIcon('direccion')}<span>${escapeHtml(proyecto.direccion)}</span></div>` : ''}
+      ${proyecto.web ? `<div class="footer-contact-item">${socialIcon('web')}<a href="https://${escapeHtml(proyecto.web)}" target="_blank" rel="noopener">${escapeHtml(proyecto.web)}</a></div>` : ''}
+    </div>
+
+    <div>
+      <span class="footer-section-title">Seguinos</span>
+      <div class="footer-social">
+        ${proyecto.instagram ? `<a href="https://instagram.com/${escapeHtml(proyecto.instagram.replace('@', ''))}" target="_blank" rel="noopener" title="Instagram">${socialIcon('instagram')}</a>` : ''}
+        ${proyecto.linkedin ? `<a href="${escapeHtml(proyecto.linkedin)}" target="_blank" rel="noopener" title="LinkedIn">${socialIcon('linkedin')}</a>` : ''}
+        ${proyecto.twitter ? `<a href="${escapeHtml(proyecto.twitter)}" target="_blank" rel="noopener" title="Twitter">${socialIcon('twitter')}</a>` : ''}
+        ${proyecto.facebook ? `<a href="${escapeHtml(proyecto.facebook)}" target="_blank" rel="noopener" title="Facebook">${socialIcon('facebook')}</a>` : ''}
+      </div>
+    </div>
   </div>
-  <div class="footer-meta">
-    ${escapeHtml(proyecto.email)}${proyecto.telefono ? ' · ' + escapeHtml(proyecto.telefono) : ''}${proyecto.web ? ' · ' + escapeHtml(proyecto.web) : ''}${proyecto.instagram ? ' · ' + escapeHtml(proyecto.instagram) : ''}
+
+  <div class="footer-bottom">
+    © ${escapeHtml(proyecto.año)} ${escapeHtml(branding.empresa_nombre)} · Generado con SoyLeo AI
   </div>
 </footer>
 

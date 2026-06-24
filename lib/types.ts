@@ -5,6 +5,7 @@
 export interface ProyectoInput {
   nombre: string;
   subtitulo?: string;
+  tagline?: string;
   descripcion: string;
   arquitecto: string;
   estudio?: string;
@@ -18,8 +19,12 @@ export interface ProyectoInput {
   sistema?: string;
   email: string;
   telefono?: string;
+  direccion?: string;
   web?: string;
   instagram?: string;
+  linkedin?: string;
+  twitter?: string;
+  facebook?: string;
 }
 
 export interface RubrosInput {
@@ -50,6 +55,9 @@ export interface BrandingInput {
   logo_url?: string;
   color_primario: string;
   color_secundario?: string;
+  color_fondo?: string;
+  color_texto?: string;
+  color_acento?: string;
   estilo: 'premium' | 'moderno' | 'minimalista' | 'tecnico';
 }
 

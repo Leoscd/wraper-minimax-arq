@@ -5,6 +5,7 @@ import { Step1Proyecto } from './Step1Proyecto';
 import { Step2Empresa } from './Step2Empresa';
 import { Step3Archivos } from './Step3Archivos';
 import { Step4Estilo } from './Step4Estilo';
+import { Step5Marca } from './Step5Marca';
 import type { GenerationRequest } from '@/lib/types';
 
 export interface WizardData {
@@ -22,6 +23,7 @@ const initialData: WizardData = {
   proyecto: {
     nombre: '',
     subtitulo: '',
+    tagline: '',
     descripcion: '',
     arquitecto: '',
     estudio: '',
@@ -29,10 +31,21 @@ const initialData: WizardData = {
     año: new Date().getFullYear().toString(),
     sistema: '',
     email: '',
+    telefono: '',
+    direccion: '',
+    instagram: '',
+    linkedin: '',
+    twitter: '',
+    facebook: '',
   },
   branding: {
     empresa_nombre: '',
+    logo_url: '',
     color_primario: '#C9A84C',
+    color_secundario: '#8a7434',
+    color_fondo: '#080808',
+    color_texto: '#ede9e0',
+    color_acento: '#E5C66B',
     estilo: 'premium',
   },
   archivos: {
@@ -41,6 +54,7 @@ const initialData: WizardData = {
   opciones: {
     incluir_cronograma: false,
     incluir_curva_inversion: false,
+    incluir_honorarios: false,
   },
 };
 
@@ -49,6 +63,7 @@ const STEPS = [
   { id: 2, title: 'Empresa', component: Step2Empresa },
   { id: 3, title: 'Archivos', component: Step3Archivos },
   { id: 4, title: 'Estilo', component: Step4Estilo },
+  { id: 5, title: 'Marca', component: Step5Marca },
 ];
 
 interface WizardProps {
@@ -81,6 +96,8 @@ export function Wizard({ onComplete }: WizardProps) {
       case 2:
         return data.archivos.galeria.length > 0;
       case 3:
+        return true;
+      case 4:
         return true;
       default:
         return false;

@@ -34,40 +34,6 @@ export function Step2Empresa({ data, updateData }: Props) {
       </div>
 
       <div style={field}>
-        <label style={labelStyle}>URL del logo (opcional)</label>
-        <input
-          type="url"
-          value={b.logo_url ?? ''}
-          onChange={(e) => updateData('branding', { logo_url: e.target.value })}
-          placeholder="https://..."
-        />
-        <small style={hintStyle}>
-          Si no tenés URL, podés subir el logo en el próximo paso.
-        </small>
-      </div>
-
-      <div style={field}>
-        <label style={labelStyle}>Color primario (acentos)</label>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <input
-            type="color"
-            value={b.color_primario ?? '#C9A84C'}
-            onChange={(e) => updateData('branding', { color_primario: e.target.value })}
-            style={{ width: '60px', height: '44px', padding: '4px' }}
-          />
-          <input
-            type="text"
-            value={b.color_primario ?? '#C9A84C'}
-            onChange={(e) => updateData('branding', { color_primario: e.target.value })}
-            style={{ flex: 1, fontFamily: 'var(--mono)' }}
-          />
-        </div>
-        <small style={hintStyle}>
-          Default: #C9A84C (Dark Gold). Probá otros como #1B3A6B (azul) o #C73E1D (terracota).
-        </small>
-      </div>
-
-      <div style={field}>
         <label style={labelStyle}>Estilo de la presentación</label>
         <div style={styleGridStyle}>
           {ESTILOS.map((e) => (
@@ -86,6 +52,11 @@ export function Step2Empresa({ data, updateData }: Props) {
           ))}
         </div>
       </div>
+
+      <p style={hintStyle}>
+        El logo, paleta completa de colores, redes sociales y datos de contacto
+        adicionales se configuran en el siguiente paso.
+      </p>
     </div>
   );
 }
