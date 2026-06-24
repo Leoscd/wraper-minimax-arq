@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Presupuesto 2026-002 — Losa 50m²</title>
+<style>
+  :root {
+    --yellow: #FFD700;
+    --blue: #1B3A6B;
+    --grafito: #2C3E50;
+    --bg: #fafafa;
+    --card: #ffffff;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--grafito);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    padding: 2cm;
+    max-width: 21cm;
+    margin: 0 auto;
+  }
+
+  .header {
+    background: var(--blue);
+    color: white;
+    padding: 24px 32px;
+    margin: -2cm -2cm 32px -2cm;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  .header-left h1 {
+    font-size: 18px; font-weight: 700; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--yellow);
+  }
+  .header-left .rol { font-size: 11px; color: rgba(255,255,255,0.7); }
+  .header-right { text-align: right; }
+  .header-right .pres-num {
+    font-size: 13px; font-weight: 700; letter-spacing: 1px;
+    color: var(--yellow);
+  }
+  .header-right .fecha { font-size: 11px; color: rgba(255,255,255,0.8); }
+  .header-right .tipo {
+    margin-top: 12px; font-size: 10px; letter-spacing: 2px;
+    text-transform: uppercase; color: rgba(255,255,255,0.6);
+  }
+  .header-right h2 {
+    font-size: 28px; font-weight: 700; color: white;
+    margin-top: 4px;
+  }
+
+  .meta-grid {
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    gap: 16px; padding: 16px 24px;
+    background: var(--card);
+    border: 1px solid #e0e0e0;
+    border-bottom: 2px solid var(--yellow);
+    margin-bottom: 32px;
+  }
+  .meta-cell .label {
+    font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--blue); display: block; margin-bottom: 4px;
+    font-weight: 700;
+  }
+  .meta-cell .value {
+    font-size: 13px; color: var(--grafito); font-weight: 500;
+  }
+
+  .rubro-titulo {
+    border-left: 4px solid var(--yellow);
+    padding-left: 12px; margin: 32px 0 12px;
+    font-size: 12px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--blue); font-weight: 700;
+  }
+
+  table {
+    width: 100%; border-collapse: collapse;
+    background: var(--card);
+    border: 1px solid #e0e0e0;
+  }
+  thead { background: var(--blue); color: white; }
+  th {
+    text-align: left; padding: 12px 16px;
+    font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+    font-weight: 600;
+  }
+  th.num, th.cant { text-align: right; }
+  td {
+    padding: 12px 16px;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 13px;
+  }
+  td.num, td.cant { text-align: right; font-variant-numeric: tabular-nums; }
+  td.total { font-weight: 700; color: var(--blue); }
+  .grupo-header td {
+    background: #f5f5f5;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--yellow);
+  }
+  .grupo-num {
+    background: var(--yellow); color: var(--blue);
+    padding: 2px 8px; margin-right: 8px;
+    font-weight: 700; font-size: 11px;
+  }
+  .grupo-nombre {
+    font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+    font-weight: 700; color: var(--blue);
+  }
+
+  .resumen {
+    margin-top: 32px;
+    background: var(--card);
+    border: 1px solid #e0e0e0;
+    border-top: 3px solid var(--yellow);
+    padding: 24px 32px;
+    display: grid; grid-template-columns: 2fr 1fr; gap: 24px;
+    align-items: center;
+  }
+  .resumen-linea {
+    display: flex; justify-content: space-between;
+    padding: 6px 0; border-bottom: 1px dashed #e0e0e0;
+    font-size: 13px;
+  }
+  .resumen-linea:last-child { border-bottom: none; }
+  .resumen-linea strong { color: var(--blue); }
+  .total-box {
+    background: var(--yellow);
+    color: var(--blue);
+    padding: 20px 24px;
+    text-align: center;
+  }
+  .total-box .label {
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    font-weight: 700; display: block; margin-bottom: 6px;
+  }
+  .total-box .value {
+    font-size: 28px; font-weight: 700;
+  }
+
+  .notas-tecnicas {
+    margin-top: 32px;
+    background: var(--card);
+    border: 1px solid #e0e0e0;
+    padding: 20px 24px;
+  }
+  .notas-tecnicas h3 {
+    font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--blue); margin-bottom: 12px; font-weight: 700;
+  }
+  .notas-tecnicas ul { list-style: none; columns: 2; column-gap: 32px; }
+  .notas-tecnicas li {
+    font-size: 12px; line-height: 1.6; color: var(--grafito);
+    padding-left: 16px; position: relative; margin-bottom: 6px;
+    break-inside: avoid;
+  }
+  .notas-tecnicas li::before {
+    content: '·'; color: var(--yellow); font-weight: 700;
+    position: absolute; left: 0; font-size: 18px;
+  }
+
+  .footer {
+    margin-top: 32px; padding-top: 16px;
+    border-top: 1px solid #e0e0e0;
+    text-align: center; font-size: 11px; color: #888;
+  }
+  .footer strong { color: var(--blue); }
+
+  @media print {
+    body { padding: 0; background: white; }
+    .header { margin: 0 0 24px 0; }
+    table { page-break-inside: avoid; }
+    .resumen { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1>Arq. Leonardo Díaz</h1>
+    <div class="rol">Arquitecto</div>
+  </div>
+  <div class="header-right">
+    <div class="pres-num">PRE-2026-002</div>
+    <div class="fecha">Mayo 2026</div>
+    <div class="tipo">Presupuesto de obra</div>
+    <h2>Losa 50m²</h2>
+  </div>
+</div>
+
+<div class="meta-grid">
+  <div class="meta-cell">
+    <span class="label">Cliente</span>
+    <span class="value">Sin cliente</span>
+  </div>
+  <div class="meta-cell">
+    <span class="label">Ubicación</span>
+    <span class="value">Tucumán, Arg.</span>
+  </div>
+  <div class="meta-cell">
+    <span class="label">Tipo de obra</span>
+    <span class="value">Obra Nueva</span>
+  </div>
+  <div class="meta-cell">
+    <span class="label">Superficie</span>
+    <span class="value">50 m²</span>
+  </div>
+  <div class="meta-cell">
+    <span class="label">Año</span>
+    <span class="value">2026</span>
+  </div>
+</div>
+
+<h3 class="rubro-titulo">Detalle de rubros</h3>
+<table>
+  <thead>
+    <tr>
+      <th class="num" style="width: 50px;">#</th>
+      <th>Descripción</th>
+      <th class="cant" style="width: 90px;">Cantidad</th>
+      <th class="num" style="width: 100px;">P. Unit. Mat.</th>
+      <th class="num" style="width: 100px;">P. Unit. MO</th>
+      <th class="num" style="width: 110px;">Total</th>
+    </tr>
+  </thead>
+  <tbody>
+    
+        <tr class="grupo-header">
+          <td colspan="6">
+            <span class="grupo-num">01</span>
+            <span class="grupo-nombre">Hormigón H-25 elaborado</span>
+          </td>
+        </tr>
+        
+        <tr>
+          <td class="num">01.01</td>
+          <td>Hormigón H-25 elaborado</td>
+          <td class="cant">7.5 m³</td>
+          <td class="num">$ 286.246</td>
+          <td class="num">$ 0</td>
+          <td class="num total">$ 2.146.845</td>
+        </tr>
+      
+      
+        <tr class="grupo-header">
+          <td colspan="6">
+            <span class="grupo-num">02</span>
+            <span class="grupo-nombre">Hierro nervado Ø12mm</span>
+          </td>
+        </tr>
+        
+        <tr>
+          <td class="num">02.01</td>
+          <td>Hierro nervado Ø12mm</td>
+          <td class="cant">52 barra</td>
+          <td class="num">$ 21.200</td>
+          <td class="num">$ 4.800</td>
+          <td class="num total">$ 1.463.200</td>
+        </tr>
+      
+        <tr>
+          <td class="num">02.02</td>
+          <td>Hierro nervado Ø8mm</td>
+          <td class="cant">102 barra</td>
+          <td class="num">$ 9.500</td>
+          <td class="num">$ 2.200</td>
+          <td class="num total">$ 1.199.400</td>
+        </tr>
+      
+      
+        <tr class="grupo-header">
+          <td colspan="6">
+            <span class="grupo-num">03</span>
+            <span class="grupo-nombre">Encofrado de madera pino losa</span>
+          </td>
+        </tr>
+        
+        <tr>
+          <td class="num">03.01</td>
+          <td>Encofrado de madera pino losa</td>
+          <td class="cant">50 m²</td>
+          <td class="num">$ 17.293</td>
+          <td class="num">$ 6.800</td>
+          <td class="num total">$ 1.204.650</td>
+        </tr>
+      
+        <tr>
+          <td class="num">03.02</td>
+          <td>Clavos de construcción</td>
+          <td class="cant">10 kg</td>
+          <td class="num">$ 6.000</td>
+          <td class="num">$ 0</td>
+          <td class="num total">$ 60.000</td>
+        </tr>
+      
+      
+  </tbody>
+</table>
+
+<div class="resumen">
+  <div>
+    <div class="resumen-linea">
+      <span>Materiales</span>
+      <strong>$ 5.142.895</strong>
+    </div>
+    <div class="resumen-linea">
+      <span>Mano de Obra</span>
+      <strong>$ 3.342.882</strong>
+    </div>
+    <div class="resumen-linea">
+        <span>Costo por m²</span>
+        <strong>$ 178.201</strong>
+      </div>
+  </div>
+  <div class="total-box">
+    <span class="label">Total estimado</span>
+    <span class="value">$ 8.910.066</span>
+  </div>
+</div>
+
+<div class="notas-tecnicas">
+        <h3>Notas técnicas</h3>
+        <ul>
+          <li>Losa llena, 15cm de espesor, hierro en dos direcciones</li><li>Hierro Ø12 cada 20cm en dirección 10m (52 barras)</li><li>Hierro Ø12 cada 20cm en dirección 5m (52 barras)</li><li>Precio material: Mayo 2026 · Tavella + Notion</li><li>Valor orientativo — verificar antes de usar</li><li>Incluyen colocación y desencofrado</li><li>No incluye bombeo ni flete</li>
+        </ul>
+      </div>
+
+<div class="footer">
+  <strong>Arq. Leonardo Díaz</strong> @ soyleoai.com
+  · Presupuesto orientativo — No reemplaza cómputo detallado
+</div>
+
+</body>
+</html>
