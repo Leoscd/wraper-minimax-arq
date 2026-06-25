@@ -70,16 +70,8 @@ export function Editor({ initialState, onSave, readonly }: EditorProps) {
     }));
   };
 
-  const moveSection = (id: SectionId, direction: 'up' | 'down') => {
-    setState((prev) => {
-      const order = [...prev.section_order];
-      const idx = order.indexOf(id);
-      if (idx === -1) return prev;
-      const newIdx = direction === 'up' ? idx - 1 : idx + 1;
-      if (newIdx < 0 || newIdx >= order.length) return prev;
-      [order[idx], order[newIdx]] = [order[newIdx], order[idx]];
-      return { ...prev, section_order: order };
-    });
+  const reorderSections = (newOrder: SectionId[]) => {
+    setState((prev) => ({ ...prev, section_order: newOrder }));
   };
 
   const handleSave = async () => {
@@ -245,7 +237,7 @@ export function Editor({ initialState, onSave, readonly }: EditorProps) {
                 sections={state.section_order}
                 labels={SECTION_LABELS}
                 visible={state.visible_sections}
-                onMove={moveSection}
+                onReorder={reorderSections}
                 onToggle={updateVisibleSections}
                 disabled={readonly}
               />
