@@ -27,6 +27,8 @@ import {
   buscarPrecio,
   calcularManoObra,
   aplicarDesperdicio,
+  calcularCronograma,
+  calcularCurvaInversion,
 } from '@/lib/tools';
 
 export const runtime = 'nodejs';
@@ -57,6 +59,12 @@ function ejecutarTool(nombre: string, input: unknown): unknown {
     case 'aplicar_desperdicio':
       return aplicarDesperdicio(
         input as Parameters<typeof aplicarDesperdicio>[0]
+      );
+    case 'calcular_cronograma':
+      return calcularCronograma(input as Parameters<typeof calcularCronograma>[0]);
+    case 'calcular_curva_inversion':
+      return calcularCurvaInversion(
+        input as Parameters<typeof calcularCurvaInversion>[0]
       );
     default:
       return { error: `Tool no encontrada: ${nombre}` };

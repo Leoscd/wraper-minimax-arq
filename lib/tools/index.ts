@@ -13,10 +13,8 @@
  * - precios.ts: búsqueda en CSV de NOA (825 items)
  * - mano-obra.ts: oficial + ayudante + cargas sociales
  * - desperdicios.ts: factores DIFERENCIADOS por material
- *
- * Por implementar:
  * - cronograma.ts: CPM con camino crítico
- * - curva.ts: curva S de inversión
+ * - curva-inversion.ts: curva S de inversión
  */
 
 export * from './types';
@@ -55,3 +53,11 @@ export {
   aplicarDesperdicioTool,
   MATERIALES_VALIDOS,
 } from './desperdicios';
+export {
+  calcularCronograma,
+  calcularCronogramaTool,
+} from './cronograma';
+export {
+  calcularCurvaInversion,
+  calcularCurvaInversionTool,
+} from './curva-inversion';

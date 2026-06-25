@@ -45,3 +45,7 @@ coverage/
 ejemplos/
 presupuesto-constructor.zip
 skill-extract/
+
+# Local-only files (NO trackear)
+.claude/
+lista-precios-noa - preciosNOA.csv (1).csv
