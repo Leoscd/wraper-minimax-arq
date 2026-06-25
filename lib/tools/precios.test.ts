@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buscarPrecio } from './precios';
+import { getPreciosDataset } from '../data/precios';
 
 describe('buscarPrecio', () => {
   it('encuentra cemento Loma Negra', () => {
@@ -36,5 +37,41 @@ describe('buscarPrecio', () => {
     const r = buscarPrecio({ termino: 'xyz123noexiste' });
     expect(r.total_encontrados).toBe(0);
     expect(r.resultados).toEqual([]);
+  });
+
+  it('sin región usa NOA por defecto', () => {
+    const r = buscarPrecio({ termino: 'loma negra' });
+    expect(r.region_usada).toContain('NOA');
+  });
+
+  it('con region NOA explícita funciona igual', () => {
+    const r = buscarPrecio({ termino: 'loma negra', region: 'NOA' });
+    expect(r.total_encontrados).toBeGreaterThan(0);
+    expect(r.region_usada).toContain('NOA');
+  });
+
+  it('región inexistente hace fallback a NOA y devuelve resultados', () => {
+    const r = buscarPrecio({ termino: 'loma negra', region: 'PATAGONIA' });
+    expect(r.total_encontrados).toBeGreaterThan(0);
+    expect(r.region_usada).toContain('NOA');
+  });
+});
+
+describe('getPreciosDataset', () => {
+  it('default devuelve el dataset NOA', () => {
+    const ds = getPreciosDataset();
+    expect(ds.metadata.region).toContain('NOA');
+    expect(ds.items.length).toBeGreaterThan(0);
+  });
+
+  it('región conocida (case/accent-insensitive) resuelve el dataset', () => {
+    const ds = getPreciosDataset('nóa');
+    expect(ds.metadata.region).toContain('NOA');
+  });
+
+  it('región desconocida hace fallback a NOA', () => {
+    const ds = getPreciosDataset('REGION_QUE_NO_EXISTE');
+    expect(ds.metadata.region).toContain('NOA');
+    expect(ds.items.length).toBeGreaterThan(0);
   });
 });

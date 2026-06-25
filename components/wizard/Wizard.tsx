@@ -68,9 +68,28 @@ const STEPS = [
 
 interface WizardProps {
   onComplete: (data: GenerationRequest) => void;
+  /** Callback opcional de progreso: recibe el HTML parcial acumulado durante el streaming. */
+  onProgress?: (html: string) => void;
 }
 
-export function Wizard({ onComplete }: WizardProps) {
+/**
+ * Extrae el HTML del bloque ```html mientras va llegando el texto crudo del modelo.
+ * - Si todavía no apareció la apertura "```html", devuelve null (nada que mostrar).
+ * - Si ya pasó la apertura, devuelve todo lo que sigue, recortando el cierre "```"
+ *   si ya llegó.
+ */
+function extraerHtmlParcial(texto: string): string | null {
+  const apertura = texto.indexOf('```html');
+  if (apertura === -1) return null;
+  let resto = texto.slice(apertura + '```html'.length);
+  // sacamos el salto de línea inicial que sigue al fence de apertura
+  resto = resto.replace(/^\r?\n/, '');
+  const cierre = resto.indexOf('```');
+  if (cierre !== -1) resto = resto.slice(0, cierre);
+  return resto;
+}
+
+export function Wizard({ onComplete, onProgress }: WizardProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [data, setData] = useState<WizardData>(initialData);
   const [submitting, setSubmitting] = useState(false);
@@ -130,19 +149,70 @@ export function Wizard({ onComplete }: WizardProps) {
         opciones: data.opciones as GenerationRequest['opciones'],
       };
 
-      const response = await fetch('/api/generate', {
+      const response = await fetch('/api/generate?stream=1', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || 'Error generando la presentación');
+      if (!response.ok || !response.body) {
+        // Si el server respondió un error JSON (ej. 400/500 antes de streamear).
+        let mensaje = 'Error generando la presentación';
+        try {
+          const err = await response.json();
+          mensaje = err.error || mensaje;
+        } catch {
+          /* el cuerpo no era JSON */
+        }
+        throw new Error(mensaje);
       }
 
-      const result = await response.json();
-      onComplete({ ...payload, html: result.html, metadata: result.metadata } as any);
+      // Leemos el stream chunk a chunk, acumulamos el texto y vamos mostrando el
+      // HTML parcial. Throttle del preview a ~200ms para no saturar el iframe.
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let acumulado = '';
+      let metadata: unknown = null;
+      let ultimoRender = 0;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        acumulado += decoder.decode(value, { stream: true });
+
+        // Sentinel de error emitido por el server una vez abierto el stream.
+        const idxError = acumulado.indexOf('\n__ERROR__');
+        if (idxError !== -1) {
+          throw new Error(acumulado.slice(idxError + '\n__ERROR__'.length).trim());
+        }
+
+        // Sentinel de metadata: marca el fin del HTML; lo recortamos del acumulado.
+        const idxMeta = acumulado.indexOf('\n__META__');
+        const cuerpo = idxMeta === -1 ? acumulado : acumulado.slice(0, idxMeta);
+        if (idxMeta !== -1 && metadata === null) {
+          try {
+            metadata = JSON.parse(acumulado.slice(idxMeta + '\n__META__'.length));
+          } catch {
+            /* metadata incompleta todavía; llegará en el próximo chunk */
+          }
+        }
+
+        const ahora = Date.now();
+        if (onProgress && ahora - ultimoRender > 200) {
+          const parcial = extraerHtmlParcial(cuerpo);
+          if (parcial !== null) onProgress(parcial);
+          ultimoRender = ahora;
+        }
+      }
+      acumulado += decoder.decode();
+
+      // Recorte final del HTML (ya con el bloque ```html cerrado).
+      const idxMetaFinal = acumulado.indexOf('\n__META__');
+      const cuerpoFinal =
+        idxMetaFinal === -1 ? acumulado : acumulado.slice(0, idxMetaFinal);
+      const htmlFinal = extraerHtmlParcial(cuerpoFinal) ?? cuerpoFinal.trim();
+
+      onComplete({ ...payload, html: htmlFinal, metadata } as any);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error desconocido');
     } finally {

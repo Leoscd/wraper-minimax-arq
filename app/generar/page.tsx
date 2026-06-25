@@ -7,13 +7,21 @@ import type { GenerationRequest } from '@/lib/types';
 export default function GenerarPage() {
   const [html, setHtml] = useState<string | null>(null);
   const [metadata, setMetadata] = useState<any>(null);
+  const [partialHtml, setPartialHtml] = useState<string | null>(null);
   const [showLeadModal, setShowLeadModal] = useState(false);
   const [leadEmail, setLeadEmail] = useState('');
   const [leadSent, setLeadSent] = useState(false);
 
+  // Progreso del streaming: el Wizard nos pasa el HTML parcial acumulado y lo
+  // mostramos en vivo en el iframe (con throttle del lado del Wizard).
+  const handleProgress = (html: string) => {
+    setPartialHtml(html);
+  };
+
   const handleComplete = (result: any) => {
     setHtml(result.html);
     setMetadata(result.metadata);
+    setPartialHtml(null);
     if (typeof window !== 'undefined') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -49,6 +57,7 @@ export default function GenerarPage() {
   const handleStartOver = () => {
     setHtml(null);
     setMetadata(null);
+    setPartialHtml(null);
     setShowLeadModal(false);
     setLeadEmail('');
     setLeadSent(false);
@@ -129,6 +138,38 @@ export default function GenerarPage() {
     );
   }
 
+  // Preview en vivo mientras streamea: mostramos el HTML parcial en un iframe
+  // arriba del wizard. No hay barra de acciones ni modal de lead todavía (eso
+  // aparece recién con handleComplete y el html final).
+  if (partialHtml !== null) {
+    return (
+      <main style={{ minHeight: '100vh', background: 'var(--dark-3)' }}>
+        <div style={previewBarStyle}>
+          <div style={previewBarInnerStyle}>
+            <div>
+              <strong style={{ color: 'var(--light)', fontFamily: 'var(--serif)', fontSize: '20px' }}>
+                Generando presentación…
+              </strong>
+              <span style={{ marginLeft: '12px', color: 'var(--text-muted)', fontSize: '11px' }}>
+                construyendo en vivo
+              </span>
+            </div>
+          </div>
+        </div>
+        <iframe
+          srcDoc={partialHtml}
+          style={{
+            width: '100%',
+            height: 'calc(100vh - 60px)',
+            border: 'none',
+            background: 'white',
+          }}
+          title="Preview en vivo"
+        />
+      </main>
+    );
+  }
+
   return (
     <main style={{ minHeight: '100vh', padding: '40px 5vw 80px' }}>
       <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
@@ -136,7 +177,7 @@ export default function GenerarPage() {
           SoyLeo <em style={{ color: 'var(--gold)' }}>AI</em>
         </a>
       </nav>
-      <Wizard onComplete={handleComplete as any} />
+      <Wizard onComplete={handleComplete as any} onProgress={handleProgress} />
     </main>
   );
 }
