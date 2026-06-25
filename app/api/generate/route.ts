@@ -17,6 +17,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createMessage, streamMessage, MODELS } from '@/lib/minimax';
 import { allTools } from '@/lib/tools/registry';
 import { construirBrief } from '@/lib/generation/brief';
+import {
+  GenerationRequestSchema,
+  formatZodError,
+} from '@/lib/schemas';
+import {
+  checkRateLimit,
+  getIpFromRequest,
+  rateLimitResponseHeaders,
+} from '@/lib/rate-limit';
 import type { GenerationRequest } from '@/lib/types';
 import {
   calcularHormigon,
@@ -158,14 +167,39 @@ function streamGeneracion(
 
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as GenerationRequest;
-
-    if (!body.proyecto || !body.branding) {
+    const ip = getIpFromRequest(req);
+    const rl = await checkRateLimit({ action: 'generate', ip });
+    if (!rl.allowed) {
       return NextResponse.json(
-        { error: 'Faltan campos requeridos: proyecto, branding' },
+        {
+          error: 'Rate limit excedido',
+          message: `Demasiadas generaciones. Intenta de nuevo después de ${rl.resetAt}.`,
+          resetAt: rl.resetAt,
+          limit: rl.limit,
+        },
+        { status: 429, headers: rateLimitResponseHeaders(rl) }
+      );
+    }
+
+    let rawBody: unknown;
+    try {
+      rawBody = await req.json();
+    } catch {
+      return NextResponse.json(
+        { error: 'Body inválido: se esperaba JSON' },
         { status: 400 }
       );
     }
+
+    const parsed = GenerationRequestSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(formatZodError(parsed.error), {
+        status: 400,
+        headers: rateLimitResponseHeaders(rl),
+      });
+    }
+
+    const body = parsed.data as GenerationRequest;
 
     const brief = construirBrief(body);
 
@@ -173,10 +207,6 @@ export async function POST(req: NextRequest) {
       { role: 'user', content: brief.userMessage },
     ];
 
-    // Modo streaming (?stream=1): devolvemos el texto del modelo a medida que llega
-    // para mejorar la latencia percibida. El cliente acumula el HTML y lo muestra en
-    // vivo. Asumimos el caso one-shot de puro texto; si el modelo decidiera invocar
-    // tools, el path no-stream (sin ?stream=1) lo cubre.
     if (req.nextUrl.searchParams.get('stream') === '1') {
       return streamGeneracion(brief, messages, body);
     }
@@ -184,7 +214,6 @@ export async function POST(req: NextRequest) {
     let html = '';
     const toolsInvocadas: string[] = [];
     let iteraciones = 0;
-    // One-shot esperado; el loop sólo cubre el fallback de que el modelo invoque tools.
     const MAX_ITERACIONES = 4;
     let cacheRead = 0;
     let cacheCreation = 0;
@@ -256,21 +285,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({
-      html,
-      metadata: {
-        proyecto: body.proyecto.nombre,
-        timestamp: new Date().toISOString(),
-        tools_invocadas: [...new Set(toolsInvocadas)],
-        iteraciones,
-        tokens: {
-          input: inputTokens,
-          output: outputTokens,
-          cache_read: cacheRead,
-          cache_creation: cacheCreation,
+    return NextResponse.json(
+      {
+        html,
+        metadata: {
+          proyecto: body.proyecto.nombre,
+          timestamp: new Date().toISOString(),
+          tools_invocadas: [...new Set(toolsInvocadas)],
+          iteraciones,
+          tokens: {
+            input: inputTokens,
+            output: outputTokens,
+            cache_read: cacheRead,
+            cache_creation: cacheCreation,
+          },
         },
       },
-    });
+      { headers: rateLimitResponseHeaders(rl) }
+    );
   } catch (err) {
     console.error('[/api/generate] Error:', err);
     return NextResponse.json(
