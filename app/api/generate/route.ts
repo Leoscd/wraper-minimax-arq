@@ -1,25 +1,23 @@
 /**
  * Endpoint principal: /api/generate
  *
- * Orquesta MiniMax M3 con function calling para generar la presentación.
+ * Genera la presentación HTML "Dark Gold" con MiniMax M3 en modo ONE-SHOT.
  *
- * Flow:
- *   1. Recibe el input del usuario (proyecto, branding, archivos)
- *   2. Construye el system prompt con la metodología
- *   3. Llama a M3 con las tools disponibles
- *   4. Si M3 invoca una tool, la ejecuta y le devuelve el resultado
- *   5. Itera hasta que M3 devuelve el HTML final
- *   6. Devuelve el HTML al cliente
+ * Flujo:
+ *   1. Recibe el input del usuario (proyecto, branding, archivos, presupuesto)
+ *   2. Pre-computa/normaliza el presupuesto y arma un "brief":
+ *        - bloques estáticos cacheables (metodología + design tokens + ejemplo)
+ *        - mensaje dinámico con los datos del proyecto
+ *   3. Hace UNA llamada a M3 con prompt caching → recibe el HTML completo
+ *   4. Las tools quedan como fallback por si el modelo decide invocarlas
+ *   5. Devuelve el HTML al cliente
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import {
-  createMessage,
-  MODELS,
-  type MessageParams,
-} from '@/lib/minimax';
-import { allTools, allTools as tools } from '@/lib/tools/registry';
-import { SISTEMA_PRESENTADOR } from '@/lib/prompts/system';
+import { createMessage, streamMessage, MODELS } from '@/lib/minimax';
+import { allTools } from '@/lib/tools/registry';
+import { construirBrief } from '@/lib/generation/brief';
+import type { GenerationRequest } from '@/lib/types';
 import {
   calcularHormigon,
   calcularHierroLongitudinal,
@@ -33,37 +31,6 @@ import {
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
-
-interface GenerateRequest {
-  proyecto: {
-    nombre: string;
-    subtitulo?: string;
-    descripcion: string;
-    arquitecto: string;
-    estudio?: string;
-    ubicacion: string;
-    año: string;
-    sistema?: string;
-    email: string;
-    telefono?: string;
-    web?: string;
-    instagram?: string;
-  };
-  archivos?: {
-    video_hero?: string;
-    imagen_principal?: string;
-    galeria?: Array<{ nombre: string; url: string }>;
-  };
-  branding: {
-    empresa_nombre: string;
-    logo_url?: string;
-    color_primario?: string;
-    estilo?: 'premium' | 'moderno' | 'minimalista' | 'tecnico';
-  };
-  opciones?: {
-    modo?: 'presentacion' | 'presupuesto_tecnico';
-  };
-}
 
 function ejecutarTool(nombre: string, input: unknown): unknown {
   switch (nombre) {
@@ -96,58 +63,94 @@ function ejecutarTool(nombre: string, input: unknown): unknown {
   }
 }
 
-function construirMensajeInicial(req: GenerateRequest): string {
-  const { proyecto, archivos, branding } = req;
+function extraerHtml(texto: string): string {
+  const match = texto.match(/```html\n([\s\S]*?)\n```/);
+  return match ? match[1] : texto;
+}
 
-  let msg = `# Proyecto a presentar
+/**
+ * Path de streaming: arma un ReadableStream que va emitiendo el texto crudo del
+ * modelo (deltas de tipo `text_delta`) tal cual llega. Al final del stream emite
+ * una línea de metadata con un sentinel (`__META__{...}`) para que el cliente
+ * pueda recuperar tokens/usage sin parsear todo el cuerpo. El cliente es quien
+ * recorta el bloque ```html``` del texto acumulado.
+ *
+ * Headers anti-buffering: `no-cache` + `X-Accel-Buffering: no` para que proxies
+ * (nginx/Vercel) no retengan los chunks.
+ */
+function streamGeneracion(
+  brief: ReturnType<typeof construirBrief>,
+  messages: import('@anthropic-ai/sdk').default.MessageParam[],
+  body: GenerationRequest
+): Response {
+  const encoder = new TextEncoder();
 
-**Nombre**: ${proyecto.nombre}
-**Subtítulo**: ${proyecto.subtitulo ?? '(no especificado)'}
-**Descripción**: ${proyecto.descripcion}
-**Arquitecto**: ${proyecto.arquitecto}
-**Estudio**: ${proyecto.estudio ?? branding.empresa_nombre}
-**Ubicación**: ${proyecto.ubicacion}
-**Año**: ${proyecto.año}
-**Sistema constructivo**: ${proyecto.sistema ?? 'No especificado'}
-**Email**: ${proyecto.email}
-**Web**: ${proyecto.web ?? 'No especificada'}
-**Instagram**: ${proyecto.instagram ?? 'No especificado'}
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      let outputTokens = 0;
+      let inputTokens = 0;
+      try {
+        const sdkStream = streamMessage({
+          model: MODELS.flagship,
+          max_tokens: 16000,
+          system: brief.system,
+          messages,
+          tools: allTools(),
+        });
 
-## Branding de la empresa
-- **Nombre de la empresa**: ${branding.empresa_nombre}
-- **Color primario**: ${branding.color_primario ?? '#C9A84C (Dark Gold default)'}
-- **Estilo**: ${branding.estilo ?? 'premium'}
-- **Logo**: ${branding.logo_url ? 'cargado' : 'no cargado'}
+        for await (const event of sdkStream as AsyncIterable<any>) {
+          if (
+            event.type === 'content_block_delta' &&
+            event.delta?.type === 'text_delta'
+          ) {
+            controller.enqueue(encoder.encode(event.delta.text));
+          } else if (event.type === 'message_delta' && event.usage) {
+            // El usage final llega en el evento message_delta.
+            outputTokens = event.usage.output_tokens ?? outputTokens;
+          } else if (event.type === 'message_start' && event.message?.usage) {
+            inputTokens = event.message.usage.input_tokens ?? inputTokens;
+          }
+        }
 
-## Archivos
-- **Video hero**: ${archivos?.video_hero ? 'sí' : 'no'}
-- **Imagen principal**: ${archivos?.imagen_principal ? 'sí' : 'no'}
-- **Galería**: ${archivos?.galeria?.length ?? 0} imágenes`;
+        // Línea final con metadata. El sentinel va precedido de un \n para que el
+        // cliente lo aísle fácilmente del HTML acumulado.
+        const meta = JSON.stringify({
+          proyecto: body.proyecto.nombre,
+          timestamp: new Date().toISOString(),
+          tools_invocadas: [],
+          iteraciones: 1,
+          tokens: {
+            input: inputTokens,
+            output: outputTokens,
+            cache_read: 0,
+            cache_creation: 0,
+          },
+        });
+        controller.enqueue(encoder.encode(`\n__META__${meta}`));
+        controller.close();
+      } catch (err) {
+        console.error('[/api/generate?stream=1] Error:', err);
+        // Si ya empezamos a streamear no podemos cambiar el status; emitimos un
+        // sentinel de error para que el cliente lo detecte.
+        const msg = err instanceof Error ? err.message : 'Error desconocido';
+        controller.enqueue(encoder.encode(`\n__ERROR__${msg}`));
+        controller.close();
+      }
+    },
+  });
 
-  if (archivos?.galeria && archivos.galeria.length > 0) {
-    msg += '\n\n### Imágenes de la galería\n';
-    archivos.galeria.forEach((img) => {
-      msg += `- ${img.nombre}: ${img.url}\n`;
-    });
-  }
-
-  msg += `
-
-## Tarea
-
-Generá la presentación HTML premium "Dark Gold" del proyecto. Recordá:
-- Usá las tools disponibles si necesitás hacer cálculos
-- Si falta información esencial, preguntá al usuario
-- Devolvé el HTML completo en un bloque de código markdown
-- Aplicá la metodología SoyLeo AI en 5 fases
-`;
-
-  return msg;
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Cache-Control': 'no-cache',
+      'X-Accel-Buffering': 'no',
+    },
+  });
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as GenerateRequest;
+    const body = (await req.json()) as GenerationRequest;
 
     if (!body.proyecto || !body.branding) {
       return NextResponse.json(
@@ -156,19 +159,29 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const mensajeUsuario = construirMensajeInicial(body);
+    const brief = construirBrief(body);
 
-    const messages: MessageParams['messages'] = [
-      {
-        role: 'user',
-        content: mensajeUsuario,
-      },
+    const messages: import('@anthropic-ai/sdk').default.MessageParam[] = [
+      { role: 'user', content: brief.userMessage },
     ];
 
+    // Modo streaming (?stream=1): devolvemos el texto del modelo a medida que llega
+    // para mejorar la latencia percibida. El cliente acumula el HTML y lo muestra en
+    // vivo. Asumimos el caso one-shot de puro texto; si el modelo decidiera invocar
+    // tools, el path no-stream (sin ?stream=1) lo cubre.
+    if (req.nextUrl.searchParams.get('stream') === '1') {
+      return streamGeneracion(brief, messages, body);
+    }
+
     let html = '';
-    let toolsInvocadas: string[] = [];
+    const toolsInvocadas: string[] = [];
     let iteraciones = 0;
-    const MAX_ITERACIONES = 10;
+    // One-shot esperado; el loop sólo cubre el fallback de que el modelo invoque tools.
+    const MAX_ITERACIONES = 4;
+    let cacheRead = 0;
+    let cacheCreation = 0;
+    let inputTokens = 0;
+    let outputTokens = 0;
 
     while (iteraciones < MAX_ITERACIONES) {
       iteraciones++;
@@ -176,47 +189,38 @@ export async function POST(req: NextRequest) {
       const response = await createMessage({
         model: MODELS.flagship,
         max_tokens: 16000,
-        system: SISTEMA_PRESENTADOR,
+        system: brief.system,
         messages,
         tools: allTools(),
       });
 
-      const assistantContent = (response as any).content as any[];
+      const usage = (response as any).usage ?? {};
+      cacheRead += usage.cache_read_input_tokens ?? 0;
+      cacheCreation += usage.cache_creation_input_tokens ?? 0;
+      inputTokens += usage.input_tokens ?? 0;
+      outputTokens += usage.output_tokens ?? 0;
 
-      messages.push({
-        role: 'assistant',
-        content: assistantContent as any,
-      });
+      const assistantContent = (response as any).content as any[];
+      messages.push({ role: 'assistant', content: assistantContent as any });
 
       const toolUseBlocks = assistantContent.filter(
         (b: any) => b.type === 'tool_use'
       );
 
       if (toolUseBlocks.length === 0) {
-        const textBlocks = assistantContent.filter(
-          (b: any) => b.type === 'text'
-        );
-        const fullText = textBlocks
+        const fullText = assistantContent
+          .filter((b: any) => b.type === 'text')
           .map((b: any) => b.text)
           .join('\n\n');
-
-        const htmlMatch = fullText.match(/```html\n([\s\S]*?)\n```/);
-        if (htmlMatch) {
-          html = htmlMatch[1];
-        } else {
-          html = fullText;
-        }
+        html = extraerHtml(fullText);
         break;
       }
 
       const toolResults: any[] = [];
       for (const block of toolUseBlocks) {
-        const toolName = block.name;
-        const toolInput = block.input;
-        toolsInvocadas.push(toolName);
-
+        toolsInvocadas.push(block.name);
         try {
-          const result = ejecutarTool(toolName, toolInput);
+          const result = ejecutarTool(block.name, block.input);
           toolResults.push({
             type: 'tool_result',
             tool_use_id: block.id,
@@ -234,10 +238,7 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      messages.push({
-        role: 'user',
-        content: toolResults as any,
-      });
+      messages.push({ role: 'user', content: toolResults as any });
     }
 
     if (!html) {
@@ -254,15 +255,18 @@ export async function POST(req: NextRequest) {
         timestamp: new Date().toISOString(),
         tools_invocadas: [...new Set(toolsInvocadas)],
         iteraciones,
-        tokens_entrada: messages.length,
+        tokens: {
+          input: inputTokens,
+          output: outputTokens,
+          cache_read: cacheRead,
+          cache_creation: cacheCreation,
+        },
       },
     });
   } catch (err) {
     console.error('[/api/generate] Error:', err);
     return NextResponse.json(
-      {
-        error: err instanceof Error ? err.message : 'Error desconocido',
-      },
+      { error: err instanceof Error ? err.message : 'Error desconocido' },
       { status: 500 }
     );
   }
