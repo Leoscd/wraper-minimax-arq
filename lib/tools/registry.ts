@@ -23,6 +23,8 @@ import { calcularMamposteriaTool } from './mamposteria';
 import { buscarPrecioTool } from './precios';
 import { calcularManoObraTool } from './mano-obra';
 import { aplicarDesperdicioTool } from './desperdicios';
+import { calcularCronogramaTool } from './cronograma';
+import { calcularCurvaInversionTool } from './curva-inversion';
 
 const allToolsList = [
   calcularHormigonTool,
@@ -33,6 +35,8 @@ const allToolsList = [
   buscarPrecioTool,
   calcularManoObraTool,
   aplicarDesperdicioTool,
+  calcularCronogramaTool,
+  calcularCurvaInversionTool,
 ];
 
 /**
@@ -54,4 +58,6 @@ export {
   buscarPrecioTool,
   calcularManoObraTool,
   aplicarDesperdicioTool,
+  calcularCronogramaTool,
+  calcularCurvaInversionTool,
 };

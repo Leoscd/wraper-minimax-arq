@@ -212,3 +212,81 @@ export interface DesperdicioOutput {
   desperdicio_pct: string;
   motivo: string;
 }
+
+export interface CronogramaTareaInput {
+  id: string;
+  nombre: string;
+  duracion_dias: number;
+  predecesoras?: string[];
+}
+
+export interface CronogramaInput {
+  tareas: CronogramaTareaInput[];
+  /** Día de inicio del proyecto. Default: 1. */
+  inicio_proyecto_dia?: number;
+}
+
+export interface CronogramaTareaOutput {
+  id: string;
+  nombre: string;
+  duracion_dias: number;
+  inicio_dia: number;
+  fin_dia: number;
+  holgura_dias: number;
+  critica: boolean;
+  predecesoras: string[];
+}
+
+export interface CronogramaOutput {
+  inicio_proyecto_dia: number;
+  duracion_total_dias: number;
+  fin_proyecto_dia: number;
+  tareas: CronogramaTareaOutput[];
+  /** IDs de las tareas que forman el camino crítico. */
+  camino_critico: string[];
+  /** Resumen legible para mostrar al usuario. */
+  resumen: string;
+}
+
+export interface CurvaInversionTareaInput {
+  id: string;
+  nombre: string;
+  duracion_dias: number;
+  inicio_dia: number;
+  costo_materiales: number;
+  costo_mano_obra: number;
+  costo_equipos: number;
+}
+
+export interface CurvaInversionInput {
+  tareas: CurvaInversionTareaInput[];
+  /** Granularidad de la tabla de salida. Default: 'semanal'. */
+  granularidad?: 'semanal' | 'mensual';
+  /** Modo de distribución de materiales. Default: 'estandar'. */
+  distribucion_materiales?: 'estandar' | 'uniforme' | 'manual';
+  /** Si distribucion_materiales='manual', mapear % por periodo (0-100). */
+  distribucion_materiales_manual?: Record<string, number[]>;
+}
+
+export interface CurvaInversionPeriodo {
+  periodo: number;
+  inicio_dia: number;
+  fin_dia: number;
+  tareas_activas: string[];
+  costo_materiales: number;
+  costo_mano_obra: number;
+  costo_equipos: number;
+  costo_total: number;
+  costo_acumulado: number;
+  porcentaje_avance: number;
+}
+
+export interface CurvaInversionOutput {
+  granularidad: 'semanal' | 'mensual';
+  duracion_total_dias: number;
+  costo_total_materiales: number;
+  costo_total_mano_obra: number;
+  costo_total_equipos: number;
+  costo_total_obra: number;
+  periodos: CurvaInversionPeriodo[];
+}
