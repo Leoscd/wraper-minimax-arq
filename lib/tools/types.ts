@@ -146,6 +146,8 @@ export interface BuscarPrecioInput {
   termino: string;
   categoria?: string;
   limit?: number;
+  /** Región del dataset de precios a usar. Default: 'NOA'. */
+  region?: string;
 }
 
 export interface PrecioEncontrado {
@@ -161,6 +163,8 @@ export interface BuscarPrecioOutput {
   termino: string;
   total_encontrados: number;
   resultados: PrecioEncontrado[];
+  /** Región efectivamente usada para la búsqueda (puede diferir si hubo fallback). */
+  region_usada: string;
 }
 
 export interface ManoObraInput {

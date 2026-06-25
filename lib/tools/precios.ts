@@ -1,42 +1,38 @@
 /**
  * Tool: buscar_precio
  *
- * Busca materiales en el CSV de precios del NOA (825 items, 112 categorías).
- * Soporta búsqueda por término libre y filtro por categoría.
+ * Busca materiales en la lista de precios de una región (default NOA).
+ * Soporta búsqueda por término libre, filtro por categoría y selección de región.
  *
  * Implementa el script `buscar_precio.py` original de SoyLeo AI pero
- * con búsqueda en memoria (mucho más rápido).
+ * con búsqueda en memoria (mucho más rápido). El dataset ahora es adaptable
+ * por región: se resuelve vía `getPreciosDataset` en vez de un import fijo.
  */
 
 import type Anthropic from '@anthropic-ai/sdk';
 import type { Tool, BuscarPrecioInput, BuscarPrecioOutput } from './types';
-import preciosData from '../../data/precios-noa.json';
-
-interface PrecioItem {
-  id: string;
-  proveedor: string;
-  categoria: string;
-  codigo: string;
-  descripcion: string;
-  precio: number;
-}
-
-const items: PrecioItem[] = preciosData.items as PrecioItem[];
+import { getPreciosDataset, REGION_DEFAULT } from '../data/precios';
 
 function normalizar(texto: string): string {
   return texto
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
+    .replace(/[̀-ͯ]/g, '');
 }
 
 function calcular(input: BuscarPrecioInput): BuscarPrecioOutput {
+  const region = input.region ?? REGION_DEFAULT;
+  const dataset = getPreciosDataset(region);
+  const items = dataset.items;
+  const regionUsada = dataset.metadata.region;
+
   const termino = normalizar(input.termino.trim());
   if (!termino) {
     return {
       termino: input.termino,
       total_encontrados: 0,
       resultados: [],
+      region_usada: regionUsada,
     };
   }
 
@@ -66,13 +62,14 @@ function calcular(input: BuscarPrecioInput): BuscarPrecioOutput {
       precio: r.precio,
       codigo: r.codigo,
     })),
+    region_usada: regionUsada,
   };
 }
 
 const schema: Anthropic.Tool = {
   name: 'buscar_precio',
   description:
-    'Busca materiales y sus precios en la lista actualizada del NOA (825 items, 112 categorías). Busca por descripción, código o categoría. Devuelve hasta N resultados ordenados por relevancia.',
+    'Busca materiales y sus precios en la lista actualizada de la región (default NOA: 825 items, 112 categorías). Busca por descripción, código o categoría. Devuelve hasta N resultados ordenados por relevancia.',
   input_schema: {
     type: 'object',
     properties: {
@@ -93,6 +90,12 @@ const schema: Anthropic.Tool = {
         default: 10,
         minimum: 1,
         maximum: 50,
+      },
+      region: {
+        type: 'string',
+        description:
+          'Región de la lista de precios a consultar. Opcional. Default: "NOA". Si la región no existe se usa NOA como fallback.',
+        default: 'NOA',
       },
     },
     required: ['termino'],
