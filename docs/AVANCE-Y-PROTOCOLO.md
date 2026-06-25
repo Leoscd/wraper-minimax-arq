@@ -144,20 +144,31 @@ números, escribe el HTML) → preview/editor → PDF**.
 
 ### Calidad
 - ~~typecheck 0 errores · **59 tests** pasando (vitest)~~ ✅
+- ~~typecheck 0 errores · **76 tests** pasando (vitest) — sumamos cronograma + curva~~ ✅
+- ~~typecheck 0 errores · **106 tests** pasando (vitest) — sumamos Zod + rate-limit~~ ✅
+
+### Cronograma + curva de inversión (tools determinísticas nuevas)
+- ~~`calcular_cronograma` (CPM con camino crítico) — `lib/tools/cronograma.ts` + 8 tests~~ ✅
+  Rama: `feat/tools-cronograma-curva` (commit `cc1cb35`), pusheada, **PR #22 pendiente**.
+- ~~`calcular_curva_inversion` (Curva S, distribución estándar/uniforme/manual) — `lib/tools/curva-inversion.ts` + 9 tests~~ ✅
+- ~~Registradas en `lib/tools/registry.ts` y `app/api/generate/route.ts` (switch de `ejecutarTool`)~~ ✅
+
+### Validación Zod + rate limiting (endpoints robustos)
+- ~~`lib/schemas.ts`: 7 schemas Zod (Proyecto, Branding, Archivos, Rubros, Generation, Lead, Upload) + `formatZodError()`~~ ✅
+- ~~`lib/rate-limit.ts`: counter por (acción, IP, ventana) en Vercel KV con TTL, fallback in-memory~~ ✅
+  Defaults: `generate` 5/h, `lead` 10/h, `upload` 30/h.
+  Headers `X-RateLimit-Limit/Remaining/Reset` en todas las respuestas.
+- ~~`/api/generate`: rate limit PRIMERO (429 si excede), Zod segundo (400 con detalle)~~ ✅
+- ~~`/api/upload`: detección de tipo por MIME (imagen/video/logo), validación contra `LIMITS.UPLOAD_*_MAX_BYTES` (413/415)~~ ✅
+- ~~`/api/lead`: rate limit + Zod con `LeadInputSchema`~~ ✅
+  Rama: `feat/zod-rate-limiting` (commit `4b0a2bc`), pusheada, **PR #23 pendiente**.
+- Tests Zod: 22 + rate-limit: 8. Total: 106 tests verdes, typecheck 0 errores, build OK.
 
 ### Pendiente
-- ~~Ingerir el CSV nuevo de precios NOA~~ ✅ **No aplica**: el CSV provisto traía los
-  mismos 825 precios que `data/precios-noa.json` y **sin** columna proveedor (perdía
-  `Arq. & Const.`/`METALTEC`). Se conserva el dataset actual; el CSV queda solo para pruebas.
-- ~~Commitear el trabajo en rama (no en `main`)~~ ✅ rama `feat/generacion-eficiente-precios-region`
-  (4 commits). **Falta `git push`** para que esté disponible desde otro lado.
-- ~~Google OAuth (login + dashboard)~~ ✅ implementado (next-auth@5 + Vercel KV).
-  Falta solo **completar las credenciales reales** en `.env.local` para el deploy.
-- [ ] **Corregir `.env.local.example`**: `ANTHROPIC_BASE_URL` sigue en `api.minimaxi.com`
-      (debe ser `api.minimax.io`). ← rápido, próximo paso sugerido.
+- [ ] **PRs #22 y #23 mergeados a main** (cronograma/curva y zod/rate-limit están en
+      ramas esperando review).
 - [ ] **Deploy a Vercel** (env vars + KV real; ojo `maxDuration=60` vs cold ~50s).
-- [ ] Tools `cronograma` y `curva de inversión` (hoy solo en el prompt, sin tool).
-- [ ] Validación Zod en endpoints · rate limiting · más templates (Light/Bold/Minimal).
+- [ ] Más templates (Light/Bold/Minimal).
 - [ ] Scraper de precios de otras regiones/países → alimenta `data/precios-<region>.json`
       (recién ahí evaluar matching semántico/embeddings).
 
@@ -194,12 +205,12 @@ SoyLeo AI — Presentador
 │
 ├── ⏳ FASE E · Producción
 │     ├── ✅ Google OAuth + dashboard (falta cargar credenciales reales)
-│     ├── [ ] fix .env.local.example (base URL .io)
+│     ├── [ ] merge PRs #22 (cronograma/curva) y #23 (zod/rate-limit) a main
 │     └── [ ] deploy Vercel (cuidar timeout)
 │
 └── ⏳ FASE F · Features
-      ├── [ ] cronograma CPM + curva de inversión (tools)
-      ├── [ ] Zod + rate limiting
+      ├── ✅ cronograma CPM + curva de inversión (tools)   ← ramas pusheadas, PRs pendientes
+      ├── ✅ Zod + rate limiting                          ← ramas pusheada, PR pendiente
       ├── [ ] templates Light/Bold/Minimal
       └── [ ] scraper precios + matching semántico
 ```

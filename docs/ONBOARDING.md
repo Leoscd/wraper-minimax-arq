@@ -109,11 +109,19 @@ Ver el detalle en [`AVANCE-Y-PROTOCOLO.md`](./AVANCE-Y-PROTOCOLO.md) §1. Resume
 **Hecho y en `main`:** wizard, generación one-shot + streaming, editor, precios por
 región, login Google + dashboard, tests. Base URL del example ya corregida.
 
+**Hecho en ramas (PRs pendientes de merge):**
+- `feat/tools-cronograma-curva` (PR #22): tools `calcular_cronograma` (CPM) +
+  `calcular_curva_inversion` (Curva S) con 17 tests nuevos. Commit `cc1cb35`.
+- `feat/zod-rate-limiting` (PR #23): validación Zod en `/api/generate`,
+  `/api/upload`, `/api/lead` + rate limiter (Vercel KV con fallback in-memory).
+  30 tests nuevos. Commit `4b0a2bc`.
+
+**Tests actuales:** **106 verdes** (eran 59 → 76 con cronograma/curva → 106 con Zod/rate-limit).
+
 **Pendientes (abiertos):**
+- [ ] Mergear PRs #22 y #23 a main.
 - [ ] Cargar credenciales reales de Google OAuth + Vercel KV para el entorno.
 - [ ] **Deploy a Vercel** (env vars + KV real; ojo `maxDuration=60` vs cold ~50s).
-- [ ] Tools `cronograma` y `curva de inversión` (hoy solo en el prompt, sin tool).
-- [ ] Validación Zod en endpoints + rate limiting.
 - [ ] Más templates (Light/Bold/Minimal).
 - [ ] Scraper de precios de otras regiones → `data/precios-<region>.json`.
 
