@@ -1,0 +1,78 @@
+[
+  {
+    "title": "Validar templates abriendo HTMLs generados",
+    "body": "**Descripcion:** Confirmar que el template `presentacion-darkgold` y `presupuesto-tecnico` se ven bien abriendolos en el navegador localmente.\n\n**Pasos:**\n1. `npx tsx scripts/generate-examples.ts`\n2. Abrir `examples-output/01-casa-rogeris-presentacion.html`\n3. Abrir `examples-output/02-losa-50-presupuesto.html`\n4. Validar visualmente con datos reales del usuario (Arq. Leonardo Diaz, SoyLeo AI, Tucuman)\n\n**Criterios de aceptacion:**\n- Tipografias Cormorant + DM Mono cargan\n- Colores Dark Gold `#C9A84C` se ven bien\n- Layout responsive funciona\n- Datos reales del usuario estan correctos"
+  },
+  {
+    "title": "Test E2E con API key real de MiniMax",
+    "body": "**Descripcion:** Validar que el endpoint `/api/generate` funciona con M3 real invocando las tools correctamente.\n\n**Pasos:**\n1. Crear `.env.local` con `ANTHROPIC_API_KEY` real\n2. Configurar Google OAuth (`GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET`)\n3. Levantar `npm run dev`\n4. Probar con el caso Losa 50m2: hormigon H-25 + hierro 12mm\n5. Probar con el caso Casa Rogeris: 14 rubros\n6. Verificar que M3 invoca las tools (no inventa numeros)\n\n**Criterios:**\n- HTML generado en menos de 60s\n- Tools invocadas al menos 3 veces\n- HTML valido sin errores"
+  },
+  {
+    "title": "Deploy a Vercel",
+    "body": "**Descripcion:** Conectar repo `Leoscd/wraper-minimax-arq` a Vercel con deploy automatico.\n\n**Pasos:**\n1. Crear proyecto en Vercel apuntando al repo\n2. Configurar env vars en Vercel dashboard (ANTHROPIC, GOOGLE, KV, AUTH_SECRET)\n3. Crear Vercel KV store\n4. Crear Blob store\n5. Configurar OAuth redirect URI: `https://<domain>/api/auth/callback/google`\n6. Deploy y validar\n\n**Criterios:**\n- Deploy automatico en cada push a main\n- URL publica accesible\n- Login con Google funciona en produccion\n- Endpoint `/api/generate` funciona con M3 real"
+  },
+  {
+    "title": "Implementar herramienta de cronograma CPM",
+    "body": "**Descripcion:** Implementar tool para generar cronogramas de obra con Critical Path Method.\n\n**Funcionalidad:**\n- Input: lista de tareas con duracion y dependencias\n- Output: tareas ordenadas, holguras, camino critico\n- Tool schema para function calling con M3\n\n**Referencia:** SKILL.md original, seccion 'FASE 3: CRONOGRAMA DE OBRA'\n\n**Archivos:**\n- `lib/tools/cronograma.ts` (tool)\n- `lib/tools/cronograma.test.ts` (tests)\n- Update `lib/tools/registry.ts` y `lib/tools/index.ts`"
+  },
+  {
+    "title": "Implementar herramienta de curva de inversion",
+    "body": "**Descripcion:** Tool para generar curva S de inversion con distribucion de gastos por periodo.\n\n**Funcionalidad:**\n- Input: cronograma + costos por tarea\n- Output: tabla semanal/mensual + Curva S + histograma de gastos\n- Distribucion: materiales al inicio, MO lineal, equipos lineal\n\n**Referencia:** SKILL.md original, seccion 'FASE 4: CURVA DE INVERSION'\n\n**Archivos:**\n- `lib/tools/curva.ts` (tool)\n- `lib/tools/curva.test.ts` (tests)\n- Update registry"
+  },
+  {
+    "title": "Upload de imagenes a Vercel Blob",
+    "body": "**Descripcion:** Reemplazar el upload actual (base64) con upload directo a Vercel Blob.\n\n**Estado actual:** Las imagenes se guardan como data URLs en el state del wizard, lo que es pesado.\n\n**Mejora:**\n- Endpoint `/api/upload` que sube a Vercel Blob y devuelve URL\n- Wizard sube inmediatamente y guarda solo la URL\n- Eliminar base64 del state\n\n**Archivos:**\n- `app/api/upload/route.ts` (update)\n- `components/wizard/Step3Archivos.tsx` (update)\n- `components/wizard/Wizard.tsx` (update)"
+  },
+  {
+    "title": "Lead capture con Resend (envio de PDF por email)",
+    "body": "**Descripcion:** Implementar envio real del PDF generado por email usando Resend.\n\n**Estado actual:** El modal de lead capture existe pero el endpoint `/api/lead` es placeholder.\n\n**Mejora:**\n- Endpoint `/api/lead` que envia el PDF como attachment\n- Integracion con Resend (SDK)\n- Template de email con branding\n- Validacion del email\n\n**Archivos:**\n- `app/api/lead/route.ts` (update)\n- `lib/email.ts` (nuevo)\n- Variables de entorno: `RESEND_API_KEY`"
+  },
+  {
+    "title": "Validacion Zod en endpoints API",
+    "body": "**Descripcion:** Agregar validacion de inputs con Zod en todos los endpoints API.\n\n**Endpoints a proteger:**\n- `/api/generate` - GenerationRequest schema\n- `/api/upload` - file type + size\n- `/api/lead` - email format\n\n**Archivos:**\n- `lib/schemas.ts` (nuevo, schemas compartidos)\n- Update endpoints para usar safeParse"
+  },
+  {
+    "title": "Rate limiting con Vercel KV",
+    "body": "**Descripcion:** Implementar rate limiting para evitar abuso del endpoint `/api/generate`.\n\n**Estado:** No hay rate limit. Un usuario puede gastar todos los tokens de M3.\n\n**Implementacion:**\n- Middleware que cuenta requests por IP en Vercel KV\n- Limite: 5 generaciones / hora / IP\n- Mensaje claro al alcanzar el limite\n\n**Archivos:**\n- `lib/rate-limit.ts` (nuevo)\n- `middleware.ts` (update)"
+  },
+  {
+    "title": "Cronograma Gantt visual en HTML",
+    "body": "**Descripcion:** Cuando el usuario pide cronograma, generar visualizacion Gantt en el HTML.\n\n**Funcionalidad:**\n- Tool `calcular_cronograma` devuelve tareas con inicio/fin\n- Template HTML genera diagrama Gantt con CSS\n- Tareas criticas en color de acento\n\n**Archivos:**\n- `lib/tools/cronograma.ts`\n- `lib/templates/presentacion-darkgold.ts` (update)"
+  },
+  {
+    "title": "Tests E2E con datos reales",
+    "body": "**Descripcion:** Sumar tests E2E del flujo completo: wizard -> generate -> preview -> save -> download.\n\n**Tests a agregar:**\n- Wizard completo (los 5 pasos)\n- Generacion con M3 mock\n- Preview con datos del state\n- Descarga de PDF\n\n**Archivos:**\n- `e2e/full-flow.spec.ts` (nuevo)"
+  },
+  {
+    "title": "CI/CD con GitHub Actions",
+    "body": "**Descripcion:** Pipeline de CI que corre en cada push y PR.\n\n**Jobs:**\n- `npm run typecheck`\n- `npm run test:run`\n- `npm run build`\n- `npx playwright test` (con browser instalado)\n\n**Archivos:**\n- `.github/workflows/ci.yml` (nuevo)"
+  },
+  {
+    "title": "Documentacion completa del proyecto",
+    "body": "**Descripcion:** Documentacion para que otros developers puedan contribuir y deployar.\n\n**Documentos a crear:**\n- `ARCHITECTURE.md`: como esta organizado el codigo\n- `DEPLOYMENT.md`: paso a paso para deployar\n- `CONTRIBUTING.md`: guidelines para PRs\n- `API.md`: docs del endpoint `/api/generate` y tools\n\n**Estado:** El `README.md` actual tiene info basica, falta el resto."
+  },
+  {
+    "title": "Undo/Redo en el editor",
+    "body": "**Descripcion:** Permitir deshacer cambios en el editor post-generacion.\n\n**Estado actual:** Cada cambio re-renderiza pero no se puede deshacer.\n\n**Implementacion:**\n- Stack de estados anteriores (limit 20)\n- Botones Undo/Redo en la barra del editor\n- Keyboard shortcuts: Cmd/Ctrl+Z, Cmd/Ctrl+Shift+Z\n\n**Archivos:**\n- `components/editor/Editor.tsx` (update)\n- `lib/editor-types.ts` (update con undo/redo)"
+  },
+  {
+    "title": "Mas templates visuales (Light, Bold, Minimal)",
+    "body": "**Descripcion:** Crear 3 templates adicionales ademas del Dark Gold.\n\n**Templates a crear:**\n- `presentacion-light`: clara, moderna, para clientes corporativos\n- `presentacion-bold`: con colores saturados, para proyectos jovenes\n- `presentacion-minimal`: blanco/negro, ultra limpio\n\n**Archivos:**\n- `lib/templates/presentacion-light.ts`\n- `lib/templates/presentacion-bold.ts`\n- `lib/templates/presentacion-minimal.ts`\n- `components/wizard/Step2Empresa.tsx` (selector de template)"
+  },
+  {
+    "title": "Validar inputs con casos reales del usuario",
+    "body": "**Descripcion:** Validar todo el flujo con los 2 casos reales del usuario:\n- Casa Rogeris (Complejo 4 Deptos Steel Frame)\n- Losa 50m2 (estructura H°A° H-25)\n\n**Pasos:**\n1. Cargar datos del usuario en el wizard\n2. Generar con M3 (cuando tengamos API key)\n3. Validar que los calculos de las tools coinciden con los PDFs originales\n4. Validar el HTML generado visualmente\n\n**Criterios:**\n- Numeros identicos a los PDFs originales del usuario"
+  },
+  {
+    "title": "Pagina de pricing y landing publica",
+    "body": "**Descripcion:** Crear landing page publica en `/` para que los arquitectos descubran la herramienta.\n\n**Secciones:**\n- Hero con demo\n- 3 features principales\n- Demo del wizard (video)\n- Pricing (free vs pro)\n- Testimonios\n- CTA a /generar\n\n**Archivos:**\n- `app/page.tsx` (update)"
+  },
+  {
+    "title": "Soporte para PDF budget upload (parsear PDFs de Revit)",
+    "body": "**Descripcion:** Cuando el usuario sube un PDF de presupuesto (Revit, Excel exportado), parsearlo automaticamente y extraer rubros.\n\n**Estado:** El usuario tiene que tipear los rubros a mano.\n\n**Mejora:**\n- Usar pdf-parse o pdfjs para extraer tablas\n- Mapeo de filas a estructura de RubrosInput\n- UI para revisar y corregir antes de generar\n\n**Archivos:**\n- `lib/pdf-parser.ts` (nuevo)\n- `components/wizard/Step3Archivos.tsx` (update con PDF upload)"
+  },
+  {
+    "title": "Mejoras de accesibilidad (a11y) en todo el wizard",
+    "body": "**Descripcion:** Auditoria y mejoras de accesibilidad en wizard y editor.\n\n**Criterios:**\n- Todos los inputs con labels asociados (no solo aria-label)\n- Contraste WCAG AA en todos los textos\n- Keyboard navigation completa\n- Screen reader testing con NVDA o VoiceOver\n\n**Archivos:**\n- Update `components/wizard/*`\n- Update `components/editor/*`"
+  }
+]
