@@ -110,10 +110,8 @@ export default function Home() {
           >
             Generar presentación
           </Link>
-          <a
-            href="https://soyleoai.com"
-            target="_blank"
-            rel="noopener noreferrer"
+          <Link
+            href="/asistente"
             style={{
               display: 'inline-block',
               border: '1px solid var(--gold-mid)',
@@ -124,8 +122,8 @@ export default function Home() {
               textTransform: 'uppercase',
             }}
           >
-            soyleoai.com
-          </a>
+            Abrir asistente
+          </Link>
         </div>
       </section>
 
