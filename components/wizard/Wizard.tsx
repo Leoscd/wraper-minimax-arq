@@ -160,7 +160,16 @@ export function Wizard({ onComplete, onProgress }: WizardProps) {
         let mensaje = 'Error generando la presentación';
         try {
           const err = await response.json();
-          mensaje = err.error || mensaje;
+          // El server devuelve { error } (errores genéricos) o { message, issues }
+          // (validación Zod). Mostramos el detalle de los campos inválidos.
+          mensaje = err.error || err.message || mensaje;
+          if (Array.isArray(err.issues) && err.issues.length > 0) {
+            mensaje +=
+              ': ' +
+              err.issues
+                .map((i: { path: string; message: string }) => `${i.path} (${i.message})`)
+                .join(', ');
+          }
         } catch {
           /* el cuerpo no era JSON */
         }

@@ -304,7 +304,7 @@ export function renderPresupuestoTecnico(data: PresupuestoTecnicoData): string {
   </div>
   <div class="meta-cell">
     <span class="label">Año</span>
-    <span class="value">${escapeHtml(proyecto.año)}</span>
+    <span class="value">${escapeHtml(proyecto.año ?? "")}</span>
   </div>
 </div>
 
