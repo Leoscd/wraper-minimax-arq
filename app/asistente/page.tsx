@@ -22,14 +22,15 @@ export default function AsistentePage() {
         <Link
           href="/"
           style={{
-            fontFamily: 'var(--serif)',
+            fontFamily: 'var(--font-inter), var(--sans)',
             fontSize: '20px',
             color: 'var(--light)',
-            fontWeight: 300,
+            fontWeight: 600,
+            letterSpacing: '-0.3px',
             textDecoration: 'none',
           }}
         >
-          SoyLeo <em style={{ color: 'var(--gold)' }}>AI</em>
+          SoyLeo <em style={{ color: 'var(--gold)', fontStyle: 'normal' }}>AI</em>
         </Link>
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
           <Link
@@ -48,27 +49,31 @@ export default function AsistentePage() {
         </div>
       </nav>
 
-      <header style={{ maxWidth: '820px', margin: '0 auto 20px' }}>
+      <header style={{ maxWidth: '760px', margin: '0 auto 20px', padding: '0 8px' }}>
         <span
           style={{
+            fontFamily: 'var(--font-inter), var(--sans)',
             fontSize: '10px',
             letterSpacing: '4px',
             textTransform: 'uppercase',
             color: 'var(--gold)',
+            fontWeight: 500,
           }}
         >
           Asistente · Arquitectura y construcción
         </span>
         <h1
           style={{
-            fontFamily: 'var(--serif)',
+            fontFamily: 'var(--font-inter), var(--sans)',
             fontSize: 'clamp(28px, 5vw, 44px)',
-            fontWeight: 300,
+            fontWeight: 600,
+            letterSpacing: '-1px',
             color: 'var(--light)',
             margin: '8px 0 0',
+            lineHeight: 1.15,
           }}
         >
-          Preguntá. Te respondo con <em style={{ color: 'var(--gold)' }}>números reales</em>.
+          Preguntá. Te respondo con <em style={{ color: 'var(--gold)', fontStyle: 'italic' }}>números reales</em>.
         </h1>
       </header>
 
