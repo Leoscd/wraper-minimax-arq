@@ -32,6 +32,7 @@ export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 const MAX_ITERACIONES = 6;
+const MAX_TOKENS = 4000;
 
 export async function POST(req: NextRequest) {
   try {
@@ -83,13 +84,14 @@ export async function POST(req: NextRequest) {
     let inputTokens = 0;
     let outputTokens = 0;
     let cacheRead = 0;
+    let cacheCreation = 0;
 
     while (iteraciones < MAX_ITERACIONES) {
       iteraciones++;
 
       const response = await createMessage({
         model: MODELS.flagship,
-        max_tokens: 2000,
+        max_tokens: MAX_TOKENS,
         system,
         messages,
         tools: allTools(),
@@ -99,6 +101,7 @@ export async function POST(req: NextRequest) {
       inputTokens += usage.input_tokens ?? 0;
       outputTokens += usage.output_tokens ?? 0;
       cacheRead += usage.cache_read_input_tokens ?? 0;
+      cacheCreation += usage.cache_creation_input_tokens ?? 0;
 
       const assistantContent = (response as any).content as any[];
       messages.push({ role: 'assistant', content: assistantContent as any });
@@ -155,6 +158,7 @@ export async function POST(req: NextRequest) {
           input: inputTokens,
           output: outputTokens,
           cache_read: cacheRead,
+          cache_creation: cacheCreation,
         },
       },
       { headers: rateLimitResponseHeaders(rl) }

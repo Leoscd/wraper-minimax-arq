@@ -18,10 +18,12 @@ interface Mensaje {
 }
 
 const SUGERENCIAS = [
-  '¿Precio del cemento en el NOA?',
-  'Calculá el hormigón de una losa de 6×4 m y 0,12 m de espesor (H-21)',
-  '¿Cuánta mano de obra lleva levantar 50 m² de mampostería?',
-  '¿Qué desperdicio conviene prever para cerámicos?',
+  '¿Cuánto sale el m² de losa H-21 de 12cm en Tucumán?',
+  '¿Cuántas bolsas de 50kg de cemento lleva un m³ de hormigón H-21?',
+  'Dame el precio actual de la barra de hierro del 12',
+  '¿Cuánta mano de obra lleva levantar 50 m² de mampostería de ladrillo hueco?',
+  '¿Qué desperdicio conviene prever para cerámicos en diagonal?',
+  'Necesito un cronograma de 3 tareas: fundaciones 5 días, estructura 15 días, revoques 8 días. ¿Cuándo arrancan las revoques?',
 ];
 
 export default function Chat() {
