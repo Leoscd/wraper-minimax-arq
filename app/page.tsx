@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import AuthButton from '@/components/auth/AuthButton';
 
 export default function Home() {
   return (
@@ -24,13 +25,22 @@ export default function Home() {
         </div>
         <div
           style={{
-            fontSize: '10px',
-            letterSpacing: '3px',
-            textTransform: 'uppercase',
-            color: 'var(--light-dim)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '20px',
           }}
         >
-          Presentador con IA
+          <span
+            style={{
+              fontSize: '10px',
+              letterSpacing: '3px',
+              textTransform: 'uppercase',
+              color: 'var(--light-dim)',
+            }}
+          >
+            Presentador con IA
+          </span>
+          <AuthButton />
         </div>
       </nav>
 

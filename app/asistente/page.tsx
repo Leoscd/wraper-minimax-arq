@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Chat from '@/components/chat/Chat';
+import AuthButton from '@/components/auth/AuthButton';
 
 export const metadata = {
   title: 'Asistente · SoyLeo AI',
@@ -30,18 +31,21 @@ export default function AsistentePage() {
         >
           SoyLeo <em style={{ color: 'var(--gold)' }}>AI</em>
         </Link>
-        <Link
-          href="/generar"
-          style={{
-            fontSize: '10px',
-            letterSpacing: '3px',
-            textTransform: 'uppercase',
-            color: 'var(--gold)',
-            textDecoration: 'none',
-          }}
-        >
-          Generar presentación →
-        </Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <Link
+            href="/generar"
+            style={{
+              fontSize: '10px',
+              letterSpacing: '3px',
+              textTransform: 'uppercase',
+              color: 'var(--gold)',
+              textDecoration: 'none',
+            }}
+          >
+            Generar presentación →
+          </Link>
+          <AuthButton />
+        </div>
       </nav>
 
       <header style={{ maxWidth: '820px', margin: '0 auto 20px' }}>
