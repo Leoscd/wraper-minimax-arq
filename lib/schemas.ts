@@ -41,17 +41,24 @@ export const ProyectoInputSchema = z.object({
   arquitecto: shortString,
   estudio: z.string().max(200).optional(),
   ubicacion: shortString,
-  año: z
-    .string()
-    .regex(/^\d{4}$/, 'Año debe tener 4 dígitos')
-    .refine(
-      (y) => {
-        const n = parseInt(y, 10);
-        return n >= 1900 && n <= 2100;
-      },
-      'Año fuera de rango (1900-2100)'
-    ),
-  estado: shortString,
+  // El wizard ofrece "año" como opcional y no expone "estado". Los aceptamos
+  // opcionales (string vacío → undefined) pero seguimos validando el formato
+  // del año cuando viene cargado.
+  año: z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z
+      .string()
+      .regex(/^\d{4}$/, 'Año debe tener 4 dígitos')
+      .refine(
+        (y) => {
+          const n = parseInt(y, 10);
+          return n >= 1900 && n <= 2100;
+        },
+        'Año fuera de rango (1900-2100)'
+      )
+      .optional()
+  ),
+  estado: z.string().max(200).optional(),
   superficie_total: z.string().max(50).optional(),
   superficie_cubierta: z.string().max(50).optional(),
   superficie_descubierta: z.string().max(50).optional(),

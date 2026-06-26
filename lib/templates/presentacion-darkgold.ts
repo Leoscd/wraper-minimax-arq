@@ -465,7 +465,7 @@ export function renderPresentacionDarkGold(data: PresentacionData): string {
   <div class="hero-overlay"></div>
   <div class="hero-content">
     <div class="hero-eyebrow">
-      <span class="hero-tag">${escapeHtml(proyecto.año)} · ${escapeHtml(proyecto.ubicacion)}</span>
+      <span class="hero-tag">${escapeHtml(proyecto.año ?? "")} · ${escapeHtml(proyecto.ubicacion)}</span>
       <span class="hero-line"></span>
     </div>
     <h1 class="hero-title">
@@ -513,11 +513,11 @@ export function renderPresentacionDarkGold(data: PresentacionData): string {
         }
         <div class="meta-item">
           <span class="meta-label">Estado</span>
-          <span class="meta-value">${escapeHtml(proyecto.estado)}</span>
+          <span class="meta-value">${escapeHtml(proyecto.estado ?? "")}</span>
         </div>
         <div class="meta-item">
           <span class="meta-label">Año</span>
-          <span class="meta-value">${escapeHtml(proyecto.año)}</span>
+          <span class="meta-value">${escapeHtml(proyecto.año ?? "")}</span>
         </div>
         <div class="meta-item">
           <span class="meta-label">Ubicación</span>
@@ -572,7 +572,7 @@ ${rubrosHtml}
   </div>
 
   <div class="footer-bottom">
-    © ${escapeHtml(proyecto.año)} ${escapeHtml(branding.empresa_nombre)} · Generado con SoyLeo AI
+    © ${escapeHtml(proyecto.año ?? "")} ${escapeHtml(branding.empresa_nombre)} · Generado con SoyLeo AI
   </div>
 </footer>
 

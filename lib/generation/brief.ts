@@ -52,7 +52,7 @@ function userMessage(req: GenerationRequest): string {
 **Arquitecto**: ${proyecto.arquitecto}
 **Estudio**: ${proyecto.estudio ?? branding.empresa_nombre}
 **Ubicación**: ${proyecto.ubicacion}
-**Año**: ${proyecto.año}
+**Año**: ${proyecto.año ?? '(no especificado)'}
 **Estado**: ${proyecto.estado ?? '(no especificado)'}
 **Sistema constructivo**: ${proyecto.sistema ?? 'No especificado'}
 **Superficies**: total ${proyecto.superficie_total ?? '-'} · cubierta ${proyecto.superficie_cubierta ?? '-'} · descubierta ${proyecto.superficie_descubierta ?? '-'} · unidades ${proyecto.unidades ?? '-'}

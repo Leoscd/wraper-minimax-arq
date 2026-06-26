@@ -10,8 +10,8 @@ export interface ProyectoInput {
   arquitecto: string;
   estudio?: string;
   ubicacion: string;
-  año: string;
-  estado: string;
+  año?: string;
+  estado?: string;
   superficie_total?: string;
   superficie_cubierta?: string;
   superficie_descubierta?: string;
