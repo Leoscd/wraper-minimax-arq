@@ -17,7 +17,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import type Anthropic from '@anthropic-ai/sdk';
-import { createMessage, MODELS } from '@/lib/minimax';
+import { createMessage, streamMessage, MODELS } from '@/lib/minimax';
 import { allTools } from '@/lib/tools/registry';
 import { ejecutarTool } from '@/lib/tools/ejecutar';
 import { chatSystemBlocks } from '@/lib/chat/system';
@@ -77,6 +77,15 @@ export async function POST(req: NextRequest) {
     }));
 
     const system = chatSystemBlocks();
+
+    // ¿El cliente pide streaming? (la UI usa ?stream=1; los tests usan la rama
+    // JSON de abajo). Leemos de req.url para no depender de req.nextUrl.
+    const wantsStream =
+      new URL(req.url).searchParams.get('stream') === '1';
+
+    if (wantsStream) {
+      return streamChat({ messages, system, rl });
+    }
 
     let reply = '';
     const toolsInvocadas: string[] = [];
@@ -170,4 +179,107 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+/**
+ * Variante streaming del chat (SSE). Mismo loop multi-turno que la rama JSON,
+ * pero usando `streamMessage` para reemitir el texto de M3 token a token a
+ * medida que llega. Las tools siguen ejecutándose server-side entre turnos.
+ *
+ * Eventos que se mandan al cliente (líneas `data: {json}\n\n`):
+ *   - { type: 'text',  delta }          → fragmento de texto del modelo
+ *   - { type: 'tool',  name }           → se está ejecutando una tool
+ *   - { type: 'done',  tools_invocadas} → fin de la respuesta
+ *   - { type: 'error', error }          → algo falló
+ */
+function streamChat({
+  messages,
+  system,
+  rl,
+}: {
+  messages: Anthropic.MessageParam[];
+  system: Anthropic.TextBlockParam[];
+  rl: Awaited<ReturnType<typeof checkRateLimit>>;
+}): Response {
+  const encoder = new TextEncoder();
+
+  const readable = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const send = (obj: unknown) =>
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
+
+      const toolsInvocadas: string[] = [];
+
+      try {
+        let iteraciones = 0;
+        while (iteraciones < MAX_ITERACIONES) {
+          iteraciones++;
+
+          const stream = streamMessage({
+            model: MODELS.flagship,
+            max_tokens: MAX_TOKENS,
+            system,
+            messages,
+            tools: allTools(),
+          });
+
+          stream.on('text', (delta: string) => send({ type: 'text', delta }));
+
+          const final = await stream.finalMessage();
+          const assistantContent = final.content as any[];
+          messages.push({ role: 'assistant', content: assistantContent as any });
+
+          const toolUseBlocks = assistantContent.filter(
+            (b: any) => b.type === 'tool_use'
+          );
+
+          if (toolUseBlocks.length === 0) break;
+
+          const toolResults: any[] = [];
+          for (const block of toolUseBlocks) {
+            toolsInvocadas.push(block.name);
+            send({ type: 'tool', name: block.name });
+            try {
+              const result = ejecutarTool(block.name, block.input);
+              toolResults.push({
+                type: 'tool_result',
+                tool_use_id: block.id,
+                content: JSON.stringify(result, null, 2),
+              });
+            } catch (err) {
+              toolResults.push({
+                type: 'tool_result',
+                tool_use_id: block.id,
+                content: JSON.stringify({
+                  error: err instanceof Error ? err.message : 'Error desconocido',
+                }),
+                is_error: true,
+              });
+            }
+          }
+
+          messages.push({ role: 'user', content: toolResults as any });
+        }
+
+        send({ type: 'done', tools_invocadas: [...new Set(toolsInvocadas)] });
+      } catch (err) {
+        console.error('[/api/chat stream] Error:', err);
+        send({
+          type: 'error',
+          error: err instanceof Error ? err.message : 'Error desconocido',
+        });
+      } finally {
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(readable, {
+    headers: {
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+      ...rateLimitResponseHeaders(rl),
+    },
+  });
 }

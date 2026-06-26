@@ -11,7 +11,7 @@ test.describe('Chat asistente (/asistente)', () => {
     ).toBeVisible();
 
     await expect(
-      page.getByRole('button', { name: /losas H-21/i })
+      page.getByRole('button', { name: /losa H-21/i })
     ).toBeVisible();
   });
 
@@ -26,15 +26,39 @@ test.describe('Chat asistente (/asistente)', () => {
     await expect(enviar).toBeEnabled();
   });
 
-  test('click en sugerencia la envía como mensaje del usuario', async ({ page }) => {
+  test('click en sugerencia la envía y muestra la respuesta + chips de tools', async ({
+    page,
+  }) => {
+    // Mockeamos /api/chat (streaming SSE) para que el test sea determinístico y
+    // no dependa de la API key de MiniMax (M3 real). El cliente lee eventos
+    // `data: {json}` separados por línea en blanco.
+    await page.route('**/api/chat**', async (route) => {
+      const sse = [
+        'data: {"type":"text","delta":"Un m³ de hormigón H-21 lleva 7 bolsas de 50kg de cemento."}',
+        'data: {"type":"tool","name":"calcular_hormigon"}',
+        'data: {"type":"done","tools_invocadas":["calcular_hormigon"]}',
+        '',
+      ].join('\n\n');
+      await route.fulfill({
+        status: 200,
+        contentType: 'text/event-stream',
+        body: sse,
+      });
+    });
+
     await page.goto('/asistente');
 
     await page.getByRole('button', { name: /bolsas de 50kg/i }).click();
 
+    // El mensaje del usuario aparece (texto de la sugerencia).
     await expect(
-      page.getByText(/bolsas de 50kg de cemento/i)
+      page.getByText(/bolsas de 50kg de cemento lleva un m³/i)
     ).toBeVisible();
 
-    await expect(page.getByText(/Pensando|Pensá/i)).toBeVisible({ timeout: 5000 }).catch(() => {});
+    // La respuesta mockeada del asistente aparece.
+    await expect(page.getByText(/lleva 7 bolsas de 50kg/i)).toBeVisible();
+
+    // El chip de la tool usada aparece (transparencia).
+    await expect(page.getByText(/calcular_hormigon/i)).toBeVisible();
   });
 });
