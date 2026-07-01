@@ -178,16 +178,25 @@ describe('generarEntregable - tipos pendientes (Pasos B y D)', () => {
     expect(r.html).toContain('P1');
   });
 
-  it('documento devuelve placeholder hasta Paso D', () => {
+  it('documento genera HTML real con markdown (Paso D done)', () => {
     const r = generarEntregable({
       tipo: 'documento',
-      proyecto: { nombre: 'X', ubicacion: 'Y', año: '2026' },
-      titulo: 'Memoria',
-      contenido_md: 'texto',
+      proyecto: { nombre: 'Casa X', ubicacion: 'Tucumán', año: '2026' },
+      titulo: 'Memoria técnica',
+      subtitulo: 'Subtítulo de prueba',
+      contenido_md:
+        '# Objetivo\n\nConstruir una casa en **CABA**.\n\n## Tareas\n\n- item 1\n- item 2',
     } as unknown as GenerarEntregableInput);
 
     expect(r.tipo).toBe('documento');
-    expect(r.id).toBe('pending');
-    expect(r.message).toMatch(/Paso D/i);
+    expect(r.id).toMatch(/^ent_/);
+    expect(r.id).not.toBe('pending');
+    expect(r.html).toContain('Casa X');
+    expect(r.html).toContain('Memoria técnica');
+    expect(r.html).toContain('Subtítulo de prueba');
+    expect(r.html).toContain('<h1');
+    expect(r.html).toContain('<strong>CABA</strong>');
+    expect(r.html).toContain('<ul');
+    expect(r.message).toMatch(/Documento .* generado/);
   });
 });

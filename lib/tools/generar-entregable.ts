@@ -21,6 +21,7 @@ import type { Tool } from './types';
 import { renderPresupuestoTecnico } from '../templates/presupuesto-tecnico';
 import { renderCronogramaGantt } from '../templates/cronograma-gantt';
 import { renderCurvaInversion } from '../templates/curva-inversion';
+import { renderDocumentoSimple } from '../templates/documento-simple';
 import type { RubrosInput, ProyectoInput } from '../types';
 
 export type EntregableTipo = 'presupuesto' | 'cronograma' | 'curva' | 'documento';
@@ -171,15 +172,21 @@ function calcular(input: GenerarEntregableInput): GenerarEntregableOutput {
     return out;
   }
 
-  // 'documento' → TODO Paso D
-  return {
-    id: 'pending',
+  // 'documento' → cualitativo (Paso D done)
+  const d = input as unknown as Parameters<typeof renderDocumentoSimple>[0];
+  const html = renderDocumentoSimple(d);
+  const id = generarId();
+  const filename = nombreArchivo('documento', { nombre: d.proyecto.nombre });
+  const out: GenerarEntregableOutput = {
+    id,
     tipo: 'documento',
-    filename: 'pendiente.html',
-    html: '<html><body><p>Template de documento cualitativo pendiente (Paso D de Fase 3).</p></body></html>',
-    message: 'Los documentos cualitativos se implementan en Paso D de Fase 3.',
-    url: '/preview/pending',
+    filename,
+    html,
+    message: `Documento "${d.titulo}" generado.`,
+    url: `/preview/${id}`,
   };
+  memoEntregables.set(id, out);
+  return out;
 }
 
 const schema: Anthropic.Tool = {
