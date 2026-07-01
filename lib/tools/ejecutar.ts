@@ -22,6 +22,7 @@ import {
   aplicarDesperdicio,
   calcularCronograma,
   calcularCurvaInversion,
+  generarEntregable,
 } from './index';
 
 export function ejecutarTool(nombre: string, input: unknown): unknown {
@@ -57,6 +58,10 @@ export function ejecutarTool(nombre: string, input: unknown): unknown {
     case 'calcular_curva_inversion':
       return calcularCurvaInversion(
         input as Parameters<typeof calcularCurvaInversion>[0]
+      );
+    case 'generar_entregable':
+      return generarEntregable(
+        input as Parameters<typeof generarEntregable>[0]
       );
     default:
       return { error: `Tool no encontrada: ${nombre}` };

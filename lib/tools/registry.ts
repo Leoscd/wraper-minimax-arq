@@ -25,6 +25,7 @@ import { calcularManoObraTool } from './mano-obra';
 import { aplicarDesperdicioTool } from './desperdicios';
 import { calcularCronogramaTool } from './cronograma';
 import { calcularCurvaInversionTool } from './curva-inversion';
+import { generarEntregableTool } from './generar-entregable';
 
 const allToolsList = [
   calcularHormigonTool,
@@ -37,6 +38,7 @@ const allToolsList = [
   aplicarDesperdicioTool,
   calcularCronogramaTool,
   calcularCurvaInversionTool,
+  generarEntregableTool,
 ];
 
 /**
@@ -60,4 +62,5 @@ export {
   aplicarDesperdicioTool,
   calcularCronogramaTool,
   calcularCurvaInversionTool,
+  generarEntregableTool,
 };
