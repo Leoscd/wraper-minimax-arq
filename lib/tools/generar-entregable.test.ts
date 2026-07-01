@@ -120,28 +120,62 @@ describe('generarEntregable - presupuesto', () => {
 });
 
 describe('generarEntregable - tipos pendientes (Pasos B y D)', () => {
-  it('cronograma devuelve placeholder hasta Paso B', () => {
+  const cronogramaOutput = {
+    duracion_total_dias: 18,
+    fin_proyecto_dia: 18,
+    camino_critico: ['T1', 'T2', 'T3'],
+    tareas: [
+      {
+        id: 'T1', nombre: 'T1', duracion_dias: 3, inicio_dia: 1, fin_dia: 3,
+        holgura_dias: 0, critica: true, predecesoras: [],
+      },
+    ],
+  };
+  const curvaOutput = {
+    granularidad: 'semanal' as const,
+    duracion_total_dias: 14,
+    costo_total_materiales: 700000,
+    costo_total_mano_obra: 300000,
+    costo_total_equipos: 0,
+    costo_total_obra: 1000000,
+    periodos: [
+      {
+        periodo: 1, inicio_dia: 1, fin_dia: 7, tareas_activas: ['T1'],
+        costo_materiales: 100000, costo_mano_obra: 50000, costo_equipos: 0,
+        costo_total: 150000, costo_acumulado: 150000, porcentaje_avance: 15,
+      },
+    ],
+  };
+
+  it('cronograma genera HTML real con Gantt (Paso B done)', () => {
     const r = generarEntregable({
       tipo: 'cronograma',
-      proyecto: { nombre: 'X', ubicacion: 'Y', año: '2026' },
-      cronograma: { dummy: true },
+      proyecto: { nombre: 'Casa X', ubicacion: 'Tucumán', año: '2026' },
+      cronograma: cronogramaOutput,
     } as unknown as GenerarEntregableInput);
 
     expect(r.tipo).toBe('cronograma');
-    expect(r.id).toBe('pending');
-    expect(r.message).toMatch(/Paso B/i);
+    expect(r.id).toMatch(/^ent_/);
+    expect(r.id).not.toBe('pending');
+    expect(r.html).toContain('Casa X');
+    expect(r.html).toContain('gantt-row');
+    expect(r.html).toContain('T1');
+    expect(r.message).toMatch(/18 días/);
   });
 
-  it('curva devuelve placeholder hasta Paso B', () => {
+  it('curva genera HTML real con curva S (Paso B done)', () => {
     const r = generarEntregable({
       tipo: 'curva',
-      proyecto: { nombre: 'X', ubicacion: 'Y', año: '2026' },
-      curva: { dummy: true },
+      proyecto: { nombre: 'Casa X', ubicacion: 'Tucumán', año: '2026' },
+      curva: curvaOutput,
     } as unknown as GenerarEntregableInput);
 
     expect(r.tipo).toBe('curva');
-    expect(r.id).toBe('pending');
-    expect(r.message).toMatch(/Paso B/i);
+    expect(r.id).toMatch(/^ent_/);
+    expect(r.id).not.toBe('pending');
+    expect(r.html).toContain('Casa X');
+    expect(r.html).toContain('<svg');
+    expect(r.html).toContain('P1');
   });
 
   it('documento devuelve placeholder hasta Paso D', () => {

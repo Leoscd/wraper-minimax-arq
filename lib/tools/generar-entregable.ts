@@ -19,6 +19,8 @@
 import type Anthropic from '@anthropic-ai/sdk';
 import type { Tool } from './types';
 import { renderPresupuestoTecnico } from '../templates/presupuesto-tecnico';
+import { renderCronogramaGantt } from '../templates/cronograma-gantt';
+import { renderCurvaInversion } from '../templates/curva-inversion';
 import type { RubrosInput, ProyectoInput } from '../types';
 
 export type EntregableTipo = 'presupuesto' | 'cronograma' | 'curva' | 'documento';
@@ -126,29 +128,47 @@ function calcular(input: GenerarEntregableInput): GenerarEntregableOutput {
   }
 
   if (input.tipo === 'cronograma') {
-    // TODO Paso B: implementar template cronograma-gantt.ts
-    return {
-      id: 'pending',
+    // Cast seguro: la tool fue llamada con el output de `calcular_cronograma`
+    // (CronogramaOutput) pero el discriminated union lo trata como `unknown`.
+    const c = input.cronograma as Parameters<typeof renderCronogramaGantt>[0]['cronograma'];
+    const p = input.proyecto as Parameters<typeof renderCronogramaGantt>[0]['proyecto'];
+    const html = renderCronogramaGantt({
+      proyecto: p,
+      cronograma: c,
+    });
+    const id = generarId();
+    const filename = nombreArchivo('cronograma', { nombre: p.nombre });
+    const out: GenerarEntregableOutput = {
+      id,
       tipo: 'cronograma',
-      filename: 'pendiente.html',
-      html: '<html><body><p>Template de cronograma pendiente (Paso B de Fase 3).</p></body></html>',
-      message:
-        'El template de cronograma todavía no está implementado (Paso B de Fase 3). Se usará la salida de `calcular_cronograma` cuando esté listo.',
-      url: '/preview/pending',
+      filename,
+      html,
+      message: `Cronograma "${p.nombre}" generado (${c.duracion_total_dias} días, ${c.camino_critico.length} tareas críticas).`,
+      url: `/preview/${id}`,
     };
+    memoEntregables.set(id, out);
+    return out;
   }
 
   if (input.tipo === 'curva') {
-    // TODO Paso B: implementar template curva-inversion.ts
-    return {
-      id: 'pending',
+    const c = input.curva as Parameters<typeof renderCurvaInversion>[0]['curva'];
+    const p = input.proyecto as Parameters<typeof renderCurvaInversion>[0]['proyecto'];
+    const html = renderCurvaInversion({
+      proyecto: p,
+      curva: c,
+    });
+    const id = generarId();
+    const filename = nombreArchivo('curva', { nombre: p.nombre });
+    const out: GenerarEntregableOutput = {
+      id,
       tipo: 'curva',
-      filename: 'pendiente.html',
-      html: '<html><body><p>Template de curva de inversión pendiente (Paso B de Fase 3).</p></body></html>',
-      message:
-        'El template de curva de inversión todavía no está implementado (Paso B de Fase 3).',
-      url: '/preview/pending',
+      filename,
+      html,
+      message: `Curva de inversión "${p.nombre}" generada (${c.periodos.length} periodos, total ${c.costo_total_obra}).`,
+      url: `/preview/${id}`,
     };
+    memoEntregables.set(id, out);
+    return out;
   }
 
   // 'documento' → TODO Paso D
