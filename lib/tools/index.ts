@@ -61,3 +61,8 @@ export {
   calcularCurvaInversion,
   calcularCurvaInversionTool,
 } from './curva-inversion';
+export {
+  generarEntregable,
+  generarEntregableTool,
+  getEntregablePorId,
+} from './generar-entregable';

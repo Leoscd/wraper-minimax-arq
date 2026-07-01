@@ -143,6 +143,21 @@ export const GenerationRequestSchema = z.object({
   opciones: OpcionesSchema,
 });
 
+/** Un turno de la conversación del asistente (chat). */
+export const ChatMessageSchema = z.object({
+  role: z.enum(['user', 'assistant']),
+  content: z.string().min(1, 'El mensaje no puede estar vacío').max(8000),
+});
+
+/**
+ * Body de /api/chat: el historial completo de la conversación. El cliente
+ * manda todos los turnos previos (stateless en el server); limitamos la
+ * cantidad para acotar el costo de tokens por request.
+ */
+export const ChatRequestSchema = z.object({
+  messages: z.array(ChatMessageSchema).min(1).max(40),
+});
+
 export const LeadInputSchema = z.object({
   email: z.string().email('Email inválido'),
   proyecto: z.string().max(500).optional(),

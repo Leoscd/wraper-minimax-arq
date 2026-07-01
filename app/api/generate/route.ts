@@ -16,6 +16,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createMessage, streamMessage, MODELS } from '@/lib/minimax';
 import { allTools } from '@/lib/tools/registry';
+import { ejecutarTool } from '@/lib/tools/ejecutar';
 import { construirBrief } from '@/lib/generation/brief';
 import {
   GenerationRequestSchema,
@@ -27,58 +28,9 @@ import {
   rateLimitResponseHeaders,
 } from '@/lib/rate-limit';
 import type { GenerationRequest } from '@/lib/types';
-import {
-  calcularHormigon,
-  calcularHierroLongitudinal,
-  calcularEstribos,
-  calcularMorteroRevoque,
-  calcularMamposteria,
-  buscarPrecio,
-  calcularManoObra,
-  aplicarDesperdicio,
-  calcularCronograma,
-  calcularCurvaInversion,
-} from '@/lib/tools';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
-
-function ejecutarTool(nombre: string, input: unknown): unknown {
-  switch (nombre) {
-    case 'calcular_hormigon':
-      return calcularHormigon(input as Parameters<typeof calcularHormigon>[0]);
-    case 'calcular_hierro_longitudinal':
-      return calcularHierroLongitudinal(
-        input as Parameters<typeof calcularHierroLongitudinal>[0]
-      );
-    case 'calcular_estribos':
-      return calcularEstribos(input as Parameters<typeof calcularEstribos>[0]);
-    case 'calcular_mortero_revoque':
-      return calcularMorteroRevoque(
-        input as Parameters<typeof calcularMorteroRevoque>[0]
-      );
-    case 'calcular_mamposteria':
-      return calcularMamposteria(
-        input as Parameters<typeof calcularMamposteria>[0]
-      );
-    case 'buscar_precio':
-      return buscarPrecio(input as Parameters<typeof buscarPrecio>[0]);
-    case 'calcular_mano_obra':
-      return calcularManoObra(input as Parameters<typeof calcularManoObra>[0]);
-    case 'aplicar_desperdicio':
-      return aplicarDesperdicio(
-        input as Parameters<typeof aplicarDesperdicio>[0]
-      );
-    case 'calcular_cronograma':
-      return calcularCronograma(input as Parameters<typeof calcularCronograma>[0]);
-    case 'calcular_curva_inversion':
-      return calcularCurvaInversion(
-        input as Parameters<typeof calcularCurvaInversion>[0]
-      );
-    default:
-      return { error: `Tool no encontrada: ${nombre}` };
-  }
-}
 
 function extraerHtml(texto: string): string {
   const match = texto.match(/```html\n([\s\S]*?)\n```/);

@@ -34,6 +34,7 @@ export interface RateLimitResult {
 
 const DEFAULTS: Record<string, { max: number; windowSeconds: number }> = {
   generate: { max: 5, windowSeconds: 3600 },
+  chat: { max: 40, windowSeconds: 3600 },
   lead: { max: 10, windowSeconds: 3600 },
   upload: { max: 30, windowSeconds: 3600 },
 };
