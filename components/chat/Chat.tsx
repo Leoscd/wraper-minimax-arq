@@ -18,6 +18,10 @@
 import { useRef, useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import {
+  enviarChatStream,
+  type ChatClientError,
+} from '@/lib/chat/client';
 
 interface Mensaje {
   role: 'user' | 'assistant';
@@ -39,10 +43,14 @@ export default function Chat() {
   const [input, setInput] = useState('');
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorTipo, setErrorTipo] = useState<ChatClientError['tipo'] | null>(null);
+  const [resetAt, setResetAt] = useState<string | null>(null);
   const [archivo, setArchivo] = useState<File | null>(null);
+  const [ultimoInput, setUltimoInput] = useState<string | null>(null);
   const finRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     finRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -55,6 +63,13 @@ export default function Chat() {
     ta.style.height = 'auto';
     ta.style.height = Math.min(ta.scrollHeight, 200) + 'px';
   }, [input]);
+
+  // Si el componente se desmonta mientras hay un stream abierto, lo cancelamos.
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, []);
 
   /** Actualiza el último mensaje (assistant) de forma inmutable. */
   const actualizarUltimo = (fn: (m: Mensaje) => Mensaje) => {
@@ -71,58 +86,27 @@ export default function Chat() {
     if (!consulta || cargando) return;
 
     setError(null);
+    setErrorTipo(null);
+    setResetAt(null);
     setArchivo(null);
+    setUltimoInput(consulta);
+
     const historial: Mensaje[] = [...mensajes, { role: 'user', content: consulta }];
     // Sumamos un placeholder de assistant que se va llenando con el streaming.
     setMensajes([...historial, { role: 'assistant', content: '', tools: [] }]);
     setInput('');
     setCargando(true);
 
+    // Cancelamos cualquier stream previo antes de arrancar uno nuevo.
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     try {
-      const res = await fetch('/api/chat?stream=1', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: historial.map((m) => ({ role: m.role, content: m.content })),
-        }),
-      });
-
-      if (!res.ok || !res.body) {
-        let msg = 'Error consultando al asistente';
-        try {
-          const err = await res.json();
-          msg = err.error || err.message || msg;
-          if (Array.isArray(err.issues) && err.issues.length) {
-            msg += ': ' + err.issues.map((i: any) => i.message).join(', ');
-          }
-        } catch {
-          /* cuerpo no JSON */
-        }
-        throw new Error(msg);
-      }
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        const partes = buffer.split('\n\n');
-        buffer = partes.pop() ?? '';
-
-        for (const parte of partes) {
-          const linea = parte.trim();
-          if (!linea.startsWith('data:')) continue;
-          let evento: any;
-          try {
-            evento = JSON.parse(linea.slice(5).trim());
-          } catch {
-            continue;
-          }
-
+      await enviarChatStream({
+        messages: historial.map((m) => ({ role: m.role, content: m.content })),
+        signal: controller.signal,
+        onEvent: (evento) => {
           if (evento.type === 'text') {
             actualizarUltimo((m) => ({ ...m, content: m.content + evento.delta }));
           } else if (evento.type === 'tool') {
@@ -135,12 +119,16 @@ export default function Chat() {
               actualizarUltimo((m) => ({ ...m, tools: evento.tools_invocadas }));
             }
           } else if (evento.type === 'error') {
-            throw new Error(evento.error || 'Error en el asistente');
+            throw new Error(evento.error);
           }
-        }
-      }
+        },
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error desconocido');
+      const e = err as ChatClientError;
+      setError(e.message || 'Error desconocido');
+      setErrorTipo(e.tipo ?? 'server');
+      if (e.resetAt) setResetAt(e.resetAt);
+
       // Sacamos el placeholder vacío si nunca llegó texto.
       setMensajes((prev) => {
         const last = prev[prev.length - 1];
@@ -150,8 +138,24 @@ export default function Chat() {
         return prev;
       });
     } finally {
+      if (abortRef.current === controller) {
+        abortRef.current = null;
+      }
       setCargando(false);
     }
+  };
+
+  const reintentar = () => {
+    if (ultimoInput) {
+      setError(null);
+      setErrorTipo(null);
+      setResetAt(null);
+      enviar(ultimoInput);
+    }
+  };
+
+  const cancelar = () => {
+    abortRef.current?.abort();
   };
 
   const onSubmit = (e: React.FormEvent) => {
@@ -231,7 +235,36 @@ export default function Chat() {
           </div>
         ))}
 
-        {error && <div className="chat-error">⚠️ {error}</div>}
+        {error && (
+          <div className="chat-error" data-tipo={errorTipo ?? 'server'}>
+            <div className="chat-error-titulo">
+              {errorTipo === 'rate_limit' && '⏱️ Rate limit'}
+              {errorTipo === 'timeout' && '⏱️ Tiempo agotado'}
+              {errorTipo === 'network' && '📡 Sin conexión'}
+              {errorTipo === 'validation' && '⚠️ Consulta inválida'}
+              {(!errorTipo || errorTipo === 'server') && '⚠️ Error del servidor'}
+            </div>
+            <div className="chat-error-msg">{error}</div>
+            {resetAt && errorTipo === 'rate_limit' && (
+              <div className="chat-error-reset">
+                Probá de nuevo a partir de las{' '}
+                {new Date(resetAt).toLocaleTimeString('es-AR', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </div>
+            )}
+            {ultimoInput && (
+              <button
+                type="button"
+                className="chat-error-reintentar"
+                onClick={reintentar}
+              >
+                Reintentar
+              </button>
+            )}
+          </div>
+        )}
         <div ref={finRef} />
       </div>
 
@@ -256,6 +289,7 @@ export default function Chat() {
             onClick={() => fileRef.current?.click()}
             aria-label="Adjuntar archivo"
             title="Adjuntar archivo"
+            disabled={cargando}
           >
             +
           </button>
@@ -275,14 +309,26 @@ export default function Chat() {
             rows={1}
             disabled={cargando}
           />
-          <button
-            className="chat-enviar"
-            type="submit"
-            disabled={cargando || !input.trim()}
-            aria-label="Enviar"
-          >
-            ↑
-          </button>
+          {cargando ? (
+            <button
+              type="button"
+              className="chat-cancelar"
+              onClick={cancelar}
+              aria-label="Cancelar"
+              title="Detener la respuesta"
+            >
+              ⏹
+            </button>
+          ) : (
+            <button
+              className="chat-enviar"
+              type="submit"
+              disabled={!input.trim()}
+              aria-label="Enviar"
+            >
+              ↑
+            </button>
+          )}
         </div>
         <p className="chat-disclaimer">
           El asistente puede equivocarse. Verificá los datos críticos de obra.
@@ -418,13 +464,66 @@ export default function Chat() {
           }
         }
         .chat-error {
-          align-self: center;
+          align-self: stretch;
+          max-width: 560px;
+          margin: 0 auto;
           color: #ff9a9a;
           font-size: 13px;
           background: rgba(255, 80, 80, 0.08);
           border: 1px solid rgba(255, 80, 80, 0.25);
-          padding: 10px 14px;
-          border-radius: 6px;
+          padding: 14px 18px;
+          border-radius: 8px;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+        .chat-error-titulo {
+          font-size: 11px;
+          letter-spacing: 1.5px;
+          text-transform: uppercase;
+          color: #ffb0b0;
+          font-weight: 600;
+        }
+        .chat-error-msg {
+          line-height: 1.5;
+          color: #ff9a9a;
+        }
+        .chat-error-reset {
+          font-size: 12px;
+          color: #d0d0d0;
+        }
+        .chat-error-reintentar {
+          align-self: flex-start;
+          margin-top: 4px;
+          padding: 6px 14px;
+          background: rgba(255, 80, 80, 0.18);
+          border: 1px solid rgba(255, 80, 80, 0.4);
+          color: #ffd0d0;
+          font-size: 12px;
+          letter-spacing: 0.5px;
+          border-radius: 4px;
+          cursor: pointer;
+          font-family: var(--font-inter), 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        }
+        .chat-error-reintentar:hover {
+          background: rgba(255, 80, 80, 0.28);
+        }
+        .chat-cancelar {
+          flex: 0 0 auto;
+          width: 34px;
+          height: 34px;
+          border-radius: 50%;
+          background: rgba(255, 80, 80, 0.15);
+          color: #ff9a9a;
+          border: 1px solid rgba(255, 80, 80, 0.3);
+          font-size: 14px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .chat-cancelar:hover {
+          background: rgba(255, 80, 80, 0.25);
         }
         /* Composer estilo IA moderna. */
         .chat-form {
