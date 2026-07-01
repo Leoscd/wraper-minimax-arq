@@ -90,6 +90,7 @@ export function Step3Archivos({ data, updateData }: Props) {
             </div>
           ) : (
             <label htmlFor="video-upload" style={dropLabelStyle}>
+              <span style={plusIconStyle}>+</span>
               <strong>Subir video</strong>
               <span>MP4 o WebM, máximo 50MB</span>
             </label>
@@ -125,6 +126,7 @@ export function Step3Archivos({ data, updateData }: Props) {
             </div>
           ) : (
             <label htmlFor="principal-upload" style={dropLabelStyle}>
+              <span style={plusIconStyle}>+</span>
               <strong>Subir imagen</strong>
               <span>Si no hay video, se usa como hero</span>
             </label>
@@ -145,6 +147,7 @@ export function Step3Archivos({ data, updateData }: Props) {
             id="galeria-upload"
           />
           <label htmlFor="galeria-upload" style={dropLabelStyle}>
+            <span style={plusIconStyle}>+</span>
             <strong>Subir imágenes</strong>
             <span>Podés seleccionar varias a la vez</span>
           </label>
@@ -207,10 +210,25 @@ const dropZoneStyle: React.CSSProperties = {
 const dropLabelStyle: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
+  alignItems: 'center',
   gap: '4px',
   cursor: 'pointer',
   padding: '20px',
   color: 'var(--text)',
+};
+const plusIconStyle: React.CSSProperties = {
+  fontSize: '24px',
+  fontWeight: 300,
+  color: 'var(--gold)',
+  marginBottom: '8px',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '40px',
+  height: '40px',
+  border: '1px solid var(--gold-mid)',
+  borderRadius: '50%',
+  lineHeight: 1,
 };
 const previewBoxStyle: React.CSSProperties = {
   position: 'relative',
