@@ -233,4 +233,57 @@ describe('POST /api/chat', () => {
       clase: 'H-21',
     });
   });
+
+  /**
+   * Flujo end-to-end de Fase 3: M3 llama a `generar_entregable` con tipo
+   * 'presupuesto' y el endpoint lo reconoce como entregable, lo acumula en
+   * `entregables` y devuelve id+url que la UI usa para abrir /preview/[id].
+   */
+  it('Fase 3: cuando M3 invoca generar_entregable, el response lo expone en entregables', async () => {
+    createMessage
+      .mockResolvedValueOnce(
+        toolUseResponse([
+          {
+            id: 'ge1',
+            name: 'generar_entregable',
+            input: {
+              tipo: 'presupuesto',
+              proyecto: { nombre: 'Casa Test' },
+              rubros: {},
+              numero_presupuesto: '2026-001',
+              fecha: 'Julio 2026',
+            },
+          },
+        ])
+      )
+      .mockResolvedValueOnce(textResponse('Acá está el presupuesto.'));
+
+    const fakeEntregable = {
+      id: 'ent_test_123',
+      tipo: 'presupuesto',
+      filename: 'casa-test-presupuesto-2026-07-01.html',
+      html: '<html>presupuesto fake</html>',
+      message: 'Presupuesto "Casa Test" generado.',
+      url: '/preview/ent_test_123',
+    };
+    ejecutarTool.mockReturnValue(fakeEntregable);
+
+    const res = await POST(makeReq(historial));
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(data.reply).toContain('Acá está el presupuesto');
+    expect(data.tools_invocadas).toContain('generar_entregable');
+    expect(Array.isArray(data.entregables)).toBe(true);
+    expect(data.entregables).toHaveLength(1);
+    expect(data.entregables[0]).toMatchObject({
+      id: 'ent_test_123',
+      tipo: 'presupuesto',
+      filename: 'casa-test-presupuesto-2026-07-01.html',
+      url: '/preview/ent_test_123',
+      message: expect.stringContaining('Presupuesto'),
+    });
+    // El html NO se manda en el response (pesaría mucho), pero el id sí.
+    expect(data.entregables[0].html).toBeUndefined();
+  });
 });

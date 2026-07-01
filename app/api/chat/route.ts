@@ -41,6 +41,32 @@ export const maxDuration = 60;
 const MAX_ITERACIONES = 6;
 const MAX_TOKENS = 4000;
 
+/**
+ * Type guard: el output de `generar_entregable` (o futuras tools que devuelvan
+ * un HTML) tiene esta forma. Si matchea, lo acumulamos en `entregables` y
+ * emitimos un evento `entregable` para que la UI lo muestre como link a
+ * `/preview/[id]`.
+ */
+function esEntregable(o: unknown): o is {
+  id: string;
+  tipo: string;
+  filename: string;
+  html: string;
+  url: string;
+  message: string;
+} {
+  return (
+    typeof o === 'object' &&
+    o !== null &&
+    typeof (o as any).id === 'string' &&
+    typeof (o as any).tipo === 'string' &&
+    typeof (o as any).filename === 'string' &&
+    typeof (o as any).html === 'string' &&
+    typeof (o as any).url === 'string' &&
+    typeof (o as any).message === 'string'
+  );
+}
+
 export async function POST(req: NextRequest) {
   try {
     const ip = getIpFromRequest(req);
@@ -96,6 +122,7 @@ export async function POST(req: NextRequest) {
 
     let reply = '';
     const toolsInvocadas: string[] = [];
+    const entregables: any[] = [];
     let iteraciones = 0;
     let inputTokens = 0;
     let outputTokens = 0;
@@ -140,6 +167,15 @@ export async function POST(req: NextRequest) {
         toolsInvocadas.push(block.name);
         try {
           const result = ejecutarTool(block.name, block.input);
+          if (esEntregable(result)) {
+            entregables.push({
+              id: result.id,
+              tipo: result.tipo,
+              filename: result.filename,
+              url: result.url,
+              message: result.message,
+            });
+          }
           toolResults.push({
             type: 'tool_result',
             tool_use_id: block.id,
@@ -169,6 +205,7 @@ export async function POST(req: NextRequest) {
       {
         reply,
         tools_invocadas: [...new Set(toolsInvocadas)],
+        entregables,
         iteraciones,
         tokens: {
           input: inputTokens,
@@ -248,6 +285,16 @@ function streamChat({
             send({ type: 'tool', name: block.name });
             try {
               const result = ejecutarTool(block.name, block.input);
+              if (esEntregable(result)) {
+                send({
+                  type: 'entregable',
+                  id: result.id,
+                  tipo: result.tipo,
+                  filename: result.filename,
+                  url: result.url,
+                  message: result.message,
+                });
+              }
               toolResults.push({
                 type: 'tool_result',
                 tool_use_id: block.id,

@@ -17,6 +17,14 @@
 export type ChatEvent =
   | { type: 'text'; delta: string }
   | { type: 'tool'; name: string }
+  | {
+      type: 'entregable';
+      id: string;
+      tipo: string;
+      filename: string;
+      url: string;
+      message: string;
+    }
   | { type: 'done'; tools_invocadas: string[]; tokens?: { input: number; output: number; cache_read: number } }
   | { type: 'error'; error: string };
 

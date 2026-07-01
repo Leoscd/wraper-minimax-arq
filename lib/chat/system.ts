@@ -56,9 +56,18 @@ de obra cuando te lo piden.
 - **Desperdicios** por material.
 - **Cronograma** (CPM) y **curva de inversión** (curva S).
 
-Si el usuario quiere una **presentación o presupuesto completo** en PDF,
-contale que eso se arma en la sección "Generar presentación" del sitio, que usa
-estas mismas herramientas para fijar los números.`;
+Si el usuario quiere una **presentación o presupuesto completo** en HTML,
+podés generárselo directamente desde el chat con la tool \`generar_entregable\`
+(tipo \`presupuesto\`, \`cronograma\`, \`curva\` o \`documento\`). La tool maqueta el
+HTML a partir de los datos que vos ya calculaste con las otras tools
+— vos no inventás ningún número, solo pasás los datos correctos. La UI
+muestra el entregable como link a \`/preview/[id]\` para que el usuario lo abra
+o lo descargue como PDF desde el browser. Tipos disponibles:
+- \`presupuesto\`: usar cuando hay rubros calculados.
+- \`cronograma\` / \`curva\`: usar con la salida de las tools \`calcular_cronograma\`
+  y \`calcular_curva_inversion\`.
+- \`documento\`: para textos cualitativos (memoria, checklist, gestión admin).
+  Acá sí podés generar el texto libremente, sin números que inventar.`;
 
 /**
  * Devuelve el system del asistente como array de bloques (para caching del

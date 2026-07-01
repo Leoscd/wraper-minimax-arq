@@ -23,10 +23,19 @@ import {
   type ChatClientError,
 } from '@/lib/chat/client';
 
+interface Entregable {
+  id: string;
+  tipo: string;
+  filename: string;
+  url: string;
+  message: string;
+}
+
 interface Mensaje {
   role: 'user' | 'assistant';
   content: string;
   tools?: string[];
+  entregables?: Entregable[];
 }
 
 const SUGERENCIAS = [
@@ -113,6 +122,20 @@ export default function Chat() {
             actualizarUltimo((m) => ({
               ...m,
               tools: [...new Set([...(m.tools ?? []), evento.name])],
+            }));
+          } else if (evento.type === 'entregable') {
+            actualizarUltimo((m) => ({
+              ...m,
+              entregables: [
+                ...(m.entregables ?? []),
+                {
+                  id: evento.id,
+                  tipo: evento.tipo,
+                  filename: evento.filename,
+                  url: evento.url,
+                  message: evento.message,
+                },
+              ],
             }));
           } else if (evento.type === 'done') {
             if (Array.isArray(evento.tools_invocadas)) {
@@ -227,6 +250,32 @@ export default function Chat() {
                       <span key={t} className="chat-tool-badge">
                         🔧 {t}
                       </span>
+                    ))}
+                  </div>
+                )}
+                {m.entregables && m.entregables.length > 0 && (
+                  <div className="chat-entregables">
+                    {m.entregables.map((e) => (
+                      <a
+                        key={e.id}
+                        href={e.url}
+                        target="_blank"
+                        rel="noopener"
+                        className="chat-entregable"
+                      >
+                        <span className="chat-entregable-icono">
+                          {e.tipo === 'presupuesto' ? '📋' : e.tipo === 'cronograma' ? '📅' : e.tipo === 'curva' ? '📈' : '📄'}
+                        </span>
+                        <span className="chat-entregable-info">
+                          <span className="chat-entregable-titulo">
+                            {e.message}
+                          </span>
+                          <span className="chat-entregable-archivo">
+                            {e.filename}
+                          </span>
+                        </span>
+                        <span className="chat-entregable-accion">Abrir →</span>
+                      </a>
                     ))}
                   </div>
                 )}
@@ -430,6 +479,59 @@ export default function Chat() {
           border: 1px solid rgba(201, 168, 76, 0.2);
           padding: 3px 8px;
           border-radius: 4px;
+        }
+        /* Cards de entregables (presupuesto, cronograma, etc). */
+        .chat-entregables {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          margin-top: 14px;
+        }
+        .chat-entregable {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px 14px;
+          background: rgba(201, 168, 76, 0.06);
+          border: 1px solid rgba(201, 168, 76, 0.28);
+          border-radius: 8px;
+          text-decoration: none;
+          color: var(--light);
+          transition: background 0.15s, transform 0.15s;
+        }
+        .chat-entregable:hover {
+          background: rgba(201, 168, 76, 0.14);
+          transform: translateY(-1px);
+        }
+        .chat-entregable-icono {
+          font-size: 22px;
+          line-height: 1;
+          flex-shrink: 0;
+        }
+        .chat-entregable-info {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          min-width: 0;
+        }
+        .chat-entregable-titulo {
+          font-size: 13px;
+          color: var(--light);
+          font-weight: 500;
+        }
+        .chat-entregable-archivo {
+          font-size: 11px;
+          color: var(--text-muted);
+          font-family: var(--mono);
+        }
+        .chat-entregable-accion {
+          font-size: 11px;
+          letter-spacing: 1.5px;
+          text-transform: uppercase;
+          color: var(--gold);
+          font-weight: 600;
+          flex-shrink: 0;
         }
         /* Indicador "pensando" (3 puntitos). */
         .chat-pensando {
