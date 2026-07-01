@@ -201,4 +201,36 @@ describe('POST /api/chat', () => {
     const data = await last!.json();
     expect(data.error).toMatch(/Rate limit/i);
   });
+
+  /**
+   * Invariante: tools_invocadas siempre es un array (puede ser vacío) y
+   * SIEMPRE refleja las tools reales que M3 pidió. Esto es lo que la UI usa
+   * para mostrar los badges de tools → los números que ve el usuario salen
+   * de aca, no del modelo.
+   */
+  it('invariante: tools_invocadas siempre es array y refleja lo que M3 pidió', async () => {
+    // Caso A: M3 NO pide tools -> array vacío, NUNCA null/undefined.
+    createMessage.mockResolvedValueOnce(textResponse('Sin números.'));
+    const resA = await POST(makeReq(historial));
+    const dataA = await resA.json();
+    expect(Array.isArray(dataA.tools_invocadas)).toBe(true);
+    expect(dataA.tools_invocadas).toEqual([]);
+
+    // Caso B: M3 pide calcular_hormigon -> la tool aparece en la lista.
+    createMessage
+      .mockReset()
+      .mockResolvedValueOnce(
+        toolUseResponse([{ id: 'h1', name: 'calcular_hormigon', input: { volumen_m3: 5, clase: 'H-21' } }])
+      )
+      .mockResolvedValueOnce(textResponse('Necesitás 8 bolsas de cemento.'));
+    ejecutarTool.mockReturnValue({ cemento_bolsas_50kg: 8 });
+
+    const resB = await POST(makeReq(historial));
+    const dataB = await resB.json();
+    expect(dataB.tools_invocadas).toContain('calcular_hormigon');
+    expect(ejecutarTool).toHaveBeenCalledWith('calcular_hormigon', {
+      volumen_m3: 5,
+      clase: 'H-21',
+    });
+  });
 });

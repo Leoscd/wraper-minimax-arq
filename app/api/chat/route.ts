@@ -11,6 +11,13 @@
  *   3. Si M3 pide tools, las ejecuta y reinyecta los resultados (loop).
  *   4. Cuando M3 responde texto sin pedir tools, eso es la respuesta final.
  *
+ * **Invariante (no romper):** todo número que vea el usuario en la respuesta
+ * del asistente SALE de una tool determinística en `lib/tools/`, no de M3. La
+ * tool se invoca via `ejecutarTool(block.name, block.input)` cuando M3 devuelve
+ * un bloque `tool_use`, y el resultado se reinyecta como `tool_result` antes
+ * de pedirle a M3 la siguiente respuesta. La response al cliente expone
+ * `tools_invocadas` para que la UI muestre el badge de cada tool usada.
+ *
  * Fase 1: respuesta NO streaming (JSON). Las consultas son cortas, así que el
  * costo de no streamear es bajo; el streaming queda como mejora futura.
  */
