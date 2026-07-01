@@ -73,7 +73,7 @@ export default function AsistentePage() {
             lineHeight: 1.15,
           }}
         >
-          Preguntá. Te respondo con <em style={{ color: 'var(--gold)', fontStyle: 'italic' }}>números reales</em>.
+          Preguntá. Te respondo con <em style={{ color: 'var(--gold)', fontStyle: 'normal' }}>números reales</em>.
         </h1>
       </header>
 

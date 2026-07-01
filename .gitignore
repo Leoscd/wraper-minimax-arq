@@ -53,6 +53,7 @@ lista-precios-noa - preciosNOA.csv (1).csv
 # Instrucciones locales (no subir)
 colega-instrucciones.md
 docs/PROXIMOS-PASOS-LOCAL.md
+docs/PENDIENTES-LOCAL.md
 # Playwright artifacts
 playwright-report/
 test-results/
