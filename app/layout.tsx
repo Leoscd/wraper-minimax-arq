@@ -13,13 +13,12 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: 'SoyLeo AI — Presentador',
   description:
-    'Genera presentaciones profesionales de proyectos arquitectónicos con IA. Metodología SoyLeo AI potenciada por MiniMax M3.',
+    'Genera presentaciones profesionales de proyectos arquitectónicos con IA. Metodología SoyLeo AI.',
   keywords: [
     'arquitectura',
     'presentaciones',
     'presupuestos',
     'IA',
-    'MiniMax',
     'SoyLeo AI',
   ],
   authors: [{ name: 'Arq. Leonardo Díaz', url: 'https://soyleoai.com' }],
