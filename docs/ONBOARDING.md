@@ -37,7 +37,7 @@ Y completá las claves. Mínimas para que arranque la generación:
 
 | Var | De dónde se saca |
 |---|---|
-| `ANTHROPIC_API_KEY` | Panel de MiniMax: https://platform.minimaxi.com/user-center/payment/token-plan |
+| `ANTHROPIC_API_KEY` | Panel de MiniMax: https://platform.minimax.io/user-center/basic-information/interface-key |
 | `ANTHROPIC_BASE_URL` | **Ya viene correcta**: `https://api.minimax.io/anthropic` (¡no `.minimaxi.com` → 401!) |
 
 Para login + dashboard (opcional para probar solo la generación):

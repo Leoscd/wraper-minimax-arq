@@ -49,7 +49,7 @@ La app queda en `http://localhost:3000`.
 
 ```env
 # MiniMax M3 (compatible con Anthropic SDK)
-ANTHROPIC_BASE_URL=https://api.minimaxi.com/anthropic
+ANTHROPIC_BASE_URL=https://api.minimax.io/anthropic
 ANTHROPIC_API_KEY=tu_key_aqui
 
 # Vercel Blob (uploads)

@@ -61,7 +61,7 @@ export default function Home() {
               color: 'var(--gold)',
             }}
           >
-            Wrapper · MiniMax M3
+            Potenciado por IA
           </span>
           <span
             style={{
@@ -99,7 +99,7 @@ export default function Home() {
           }}
         >
           Cargá los datos de tu proyecto, los renders y el presupuesto. La
-          metodología SoyLeo AI, potenciada por MiniMax M3, genera una
+          metodología SoyLeo AI, potenciada por IA, genera una
           presentación HTML lista para imprimir a PDF.
         </p>
 
