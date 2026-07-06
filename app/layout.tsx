@@ -11,20 +11,23 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'SoyLeo AI — Presentador',
+  title: 'IA para Arquitectos — SoyLeo',
   description:
-    'Genera presentaciones profesionales de proyectos arquitectónicos con IA. Metodología SoyLeo AI.',
+    'Tu asistente de IA para arquitectura: precios reales, cómputos, presupuestos y cronogramas en un chat. Y cuando tu trabajo está listo, generá la presentación con tu logo y tus colores.',
   keywords: [
     'arquitectura',
-    'presentaciones',
-    'presupuestos',
     'IA',
-    'SoyLeo AI',
+    'asistente',
+    'presupuestos',
+    'cómputos',
+    'presentaciones',
+    'SoyLeo',
   ],
   authors: [{ name: 'Arq. Leonardo Díaz', url: 'https://soyleoai.com' }],
   openGraph: {
-    title: 'SoyLeo AI — Presentador',
-    description: 'Presentaciones arquitectónicas premium con IA',
+    title: 'IA para Arquitectos — SoyLeo',
+    description:
+      'Asistente de IA para arquitectos: precios, cómputos, presupuestos y presentaciones con tu marca.',
     type: 'website',
     locale: 'es_AR',
   },

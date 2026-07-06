@@ -38,7 +38,7 @@ export default function Home() {
               color: 'var(--light-dim)',
             }}
           >
-            Presentador con IA
+            IA para Arquitectos
           </span>
           <AuthButton />
         </div>
@@ -84,9 +84,9 @@ export default function Home() {
             marginBottom: '32px',
           }}
         >
-          Presentaciones <em style={{ color: 'var(--gold)' }}>premium</em>
+          Tu asistente de <em style={{ color: 'var(--gold)' }}>IA</em>
           <br />
-          para tus proyectos.
+          para arquitectura.
         </h1>
 
         <p
@@ -98,14 +98,17 @@ export default function Home() {
             marginBottom: '48px',
           }}
         >
-          Cargá los datos de tu proyecto, los renders y el presupuesto. La
-          metodología SoyLeo AI, potenciada por IA, genera una
-          presentación HTML lista para imprimir a PDF.
+          Estoy acá para sacarte el trabajo pesado de encima: consultá precios
+          reales de materiales, resolvé cómputos estructurales, armá
+          presupuestos, cronogramas y curvas de inversión — todo conversando,
+          como con un colega experto. Y cuando tu proyecto esté armado,
+          generá una presentación profesional con tus colores y tu logo,
+          lista para mostrar al cliente.
         </p>
 
         <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
           <Link
-            href="/generar"
+            href="/asistente"
             style={{
               display: 'inline-block',
               background: 'var(--gold)',
@@ -118,10 +121,10 @@ export default function Home() {
               transition: 'transform 0.2s',
             }}
           >
-            Generar presentación
+            Abrir el asistente
           </Link>
           <Link
-            href="/asistente"
+            href="/generar"
             style={{
               display: 'inline-block',
               border: '1px solid var(--gold-mid)',
@@ -132,7 +135,7 @@ export default function Home() {
               textTransform: 'uppercase',
             }}
           >
-            Abrir asistente
+            Crear una presentación
           </Link>
         </div>
       </section>
@@ -150,18 +153,18 @@ export default function Home() {
         {[
           {
             tag: '01',
-            title: 'Cómputos precisos',
-            text: 'Cálculos determinísticos para hormigón, hierros y morteros. Sin errores de cálculo.',
+            title: 'Un experto en tu chat',
+            text: 'Precios de materiales, cómputos de hormigón y hierro, mano de obra, cronogramas. Preguntá como le preguntarías a un colega.',
           },
           {
             tag: '02',
-            title: 'Presupuestos completos',
-            text: '25 rubros estándar con mano de obra, cargas sociales y materiales del NOA.',
+            title: 'Números reales, no inventados',
+            text: 'Cada precio y cada cómputo sale de cálculos determinísticos y listas de precios reales. La IA conversa; las cuentas las hace la calculadora.',
           },
           {
             tag: '03',
-            title: 'Diseño editorial',
-            text: 'HTML premium "Dark Gold" customizable con tu logo y colores.',
+            title: 'Entregables con tu marca',
+            text: 'Cuando tu trabajo está listo, convertilo en presupuesto, cronograma o presentación premium con tus colores y tu logo, en PDF.',
           },
         ].map((f) => (
           <div key={f.tag}>

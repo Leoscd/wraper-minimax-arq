@@ -3,7 +3,7 @@ import Chat from '@/components/chat/Chat';
 import AuthButton from '@/components/auth/AuthButton';
 
 export const metadata = {
-  title: 'Asistente · SoyLeo AI',
+  title: 'Asistente · IA para Arquitectos — SoyLeo',
   description:
     'Asistente experto en arquitectura y construcción: precios, cómputos y mano de obra del NOA.',
 };
