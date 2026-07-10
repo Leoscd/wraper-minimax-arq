@@ -149,7 +149,9 @@ test.describe('Precios propios en el chat (/asistente)', () => {
       buffer: Buffer.from('apuntes de la reunión de obra', 'utf-8'),
     });
 
-    await expect(page.getByRole('alert')).toBeVisible();
+    await expect(
+      page.getByRole('alert').filter({ hasText: /No se reconocieron/i })
+    ).toBeVisible();
     await expect(page.getByTestId('lista-propia-banner')).not.toBeVisible();
   });
 });
