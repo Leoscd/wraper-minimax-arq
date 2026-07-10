@@ -176,6 +176,15 @@ export async function POST(req: NextRequest) {
         toolsInvocadas.push(block.name);
         try {
           const result = await ejecutarTool(block.name, block.input, ctx);
+          if ((result as any)?.error) {
+            console.warn(
+              `[chat] tool ${block.name} devolvió error:`,
+              (result as any).error,
+              (result as any).mensaje ?? '',
+              '\n  input:',
+              JSON.stringify(block.input).slice(0, 600)
+            );
+          }
           if (esEntregable(result)) {
             entregables.push({
               id: result.id,
@@ -296,6 +305,15 @@ function streamChat({
             send({ type: 'tool', name: block.name });
             try {
               const result = await ejecutarTool(block.name, block.input, ctx);
+              if ((result as any)?.error) {
+                console.warn(
+                  `[chat] tool ${block.name} devolvió error:`,
+                  (result as any).error,
+                  (result as any).mensaje ?? '',
+                  '\n  input:',
+                  JSON.stringify(block.input).slice(0, 600)
+                );
+              }
               if (esEntregable(result)) {
                 send({
                   type: 'entregable',
