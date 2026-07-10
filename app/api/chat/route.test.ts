@@ -93,7 +93,11 @@ describe('POST /api/chat', () => {
     const data = await res.json();
 
     expect(res.status).toBe(200);
-    expect(ejecutarTool).toHaveBeenCalledWith('buscar_precio', { termino: 'cemento' });
+    expect(ejecutarTool).toHaveBeenCalledWith(
+      'buscar_precio',
+      { termino: 'cemento' },
+      expect.any(Object)
+    );
     expect(data.reply).toBe('El cemento cuesta $X.');
     expect(data.tools_invocadas).toEqual(['buscar_precio']);
     expect(data.iteraciones).toBe(2);
@@ -228,10 +232,11 @@ describe('POST /api/chat', () => {
     const resB = await POST(makeReq(historial));
     const dataB = await resB.json();
     expect(dataB.tools_invocadas).toContain('calcular_hormigon');
-    expect(ejecutarTool).toHaveBeenCalledWith('calcular_hormigon', {
-      volumen_m3: 5,
-      clase: 'H-21',
-    });
+    expect(ejecutarTool).toHaveBeenCalledWith(
+      'calcular_hormigon',
+      { volumen_m3: 5, clase: 'H-21' },
+      expect.any(Object)
+    );
   });
 
   /**
@@ -285,5 +290,45 @@ describe('POST /api/chat', () => {
     });
     // El html NO se manda en el response (pesaría mucho), pero el id sí.
     expect(data.entregables[0].html).toBeUndefined();
+  });
+
+  it('precios_propios del body llegan a ejecutarTool como contexto', async () => {
+    createMessage
+      .mockResolvedValueOnce(
+        toolUseResponse([{ id: 't1', name: 'buscar_precio', input: { termino: 'cemento' } }])
+      )
+      .mockResolvedValueOnce(textResponse('Según tu lista, $14.000.'));
+    ejecutarTool.mockReturnValue({ resultados: [] });
+
+    const propios = [{ descripcion: 'Cemento x 50kg', precio: 14000 }];
+    const res = await POST(makeReq({ ...historial, precios_propios: propios }));
+
+    expect(res.status).toBe(200);
+    expect(ejecutarTool).toHaveBeenCalledWith(
+      'buscar_precio',
+      { termino: 'cemento' },
+      { preciosPropios: propios }
+    );
+  });
+
+  it('precios_propios inválidos devuelven 400 sin llamar a M3', async () => {
+    const res = await POST(
+      makeReq({
+        ...historial,
+        precios_propios: [{ descripcion: 'Sin precio numérico', precio: 'catorce' }],
+      })
+    );
+    expect(res.status).toBe(400);
+    expect(createMessage).not.toHaveBeenCalled();
+  });
+
+  it('más de 1500 precios propios devuelve 400', async () => {
+    const demasiados = Array.from({ length: 1501 }, (_, i) => ({
+      descripcion: `Item ${i}`,
+      precio: i + 1,
+    }));
+    const res = await POST(makeReq({ ...historial, precios_propios: demasiados }));
+    expect(res.status).toBe(400);
+    expect(createMessage).not.toHaveBeenCalled();
   });
 });
