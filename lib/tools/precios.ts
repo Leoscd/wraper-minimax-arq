@@ -1,8 +1,10 @@
 /**
  * Tool: buscar_precio
  *
- * Busca materiales en la lista de precios de una región (default NOA).
- * Soporta búsqueda por término libre, filtro por categoría y selección de región.
+ * Busca materiales en la lista de precios de una región (default NOA) y,
+ * si el usuario cargó una lista propia en la sesión (ToolContext), también
+ * en esa lista. Los resultados propios van primero y cada uno declara su
+ * `fuente` para que el asistente siempre pueda citar de dónde salió el precio.
  *
  * Implementa el script `buscar_precio.py` original de SoyLeo AI pero
  * con búsqueda en memoria (mucho más rápido). El dataset ahora es adaptable
@@ -10,7 +12,13 @@
  */
 
 import type Anthropic from '@anthropic-ai/sdk';
-import type { Tool, BuscarPrecioInput, BuscarPrecioOutput } from './types';
+import type {
+  Tool,
+  ToolContext,
+  BuscarPrecioInput,
+  BuscarPrecioOutput,
+  PrecioEncontrado,
+} from './types';
 import { getPreciosDataset, regionesDisponibles, REGION_DEFAULT } from '../data/precios';
 
 function normalizar(texto: string): string {
@@ -20,11 +28,33 @@ function normalizar(texto: string): string {
     .replace(/[̀-ͯ]/g, '');
 }
 
-function calcular(input: BuscarPrecioInput): BuscarPrecioOutput {
+/** Filtro por término (descripción/categoría/código) + categoría opcional. */
+function filtrar<T extends { descripcion: string; categoria?: string; codigo?: string }>(
+  items: T[],
+  termino: string,
+  categoria?: string
+): T[] {
+  let resultados = items.filter((item) => {
+    const matchDescripcion = normalizar(item.descripcion).includes(termino);
+    const matchCategoria = normalizar(item.categoria ?? '').includes(termino);
+    const matchCodigo = normalizar(item.codigo ?? '').includes(termino);
+    return matchDescripcion || matchCategoria || matchCodigo;
+  });
+
+  if (categoria) {
+    const cat = normalizar(categoria);
+    resultados = resultados.filter((i) => normalizar(i.categoria ?? '').includes(cat));
+  }
+
+  return resultados;
+}
+
+function calcular(input: BuscarPrecioInput, ctx?: ToolContext): BuscarPrecioOutput {
   const region = input.region ?? REGION_DEFAULT;
   const dataset = getPreciosDataset(region);
+  const propios = ctx?.preciosPropios ?? [];
 
-  if (!dataset) {
+  if (!dataset && propios.length === 0) {
     return {
       termino: input.termino,
       total_encontrados: 0,
@@ -40,53 +70,64 @@ function calcular(input: BuscarPrecioInput): BuscarPrecioOutput {
     };
   }
 
-  const items = dataset.items;
-  const regionUsada = dataset.metadata.region;
-
   const termino = normalizar(input.termino.trim());
   if (!termino) {
     return {
       termino: input.termino,
       total_encontrados: 0,
       resultados: [],
-      region_usada: regionUsada,
+      ...(dataset ? { region_usada: dataset.metadata.region } : {}),
     };
   }
 
-  let resultados = items.filter((item) => {
-    const matchDescripcion = normalizar(item.descripcion).includes(termino);
-    const matchCategoria = normalizar(item.categoria).includes(termino);
-    const matchCodigo = normalizar(item.codigo).includes(termino);
-    return matchDescripcion || matchCategoria || matchCodigo;
-  });
+  // Ids sintéticos estables por posición en la lista cargada.
+  const propiosConId: PrecioEncontrado[] = propios.map((p, i) => ({
+    id: `PROPIO-${String(i + 1).padStart(4, '0')}`,
+    descripcion: p.descripcion,
+    categoria: p.categoria ?? '',
+    proveedor: p.proveedor ?? 'Lista propia del usuario',
+    precio: p.precio,
+    codigo: p.codigo ?? '',
+    fuente: 'lista_propia',
+  }));
 
-  if (input.categoria) {
-    const cat = normalizar(input.categoria);
-    resultados = resultados.filter((i) => normalizar(i.categoria).includes(cat));
-  }
+  const matchPropios = filtrar(propiosConId, termino, input.categoria);
+  const matchDataset = dataset ? filtrar(dataset.items, termino, input.categoria) : [];
 
+  // Los resultados propios nunca se truncan a favor del dataset:
+  // llenan el límite primero y el dataset completa el cupo restante.
   const limit = Math.min(input.limit ?? 10, 50);
-  const top = resultados.slice(0, limit);
+  const topPropios = matchPropios.slice(0, limit);
+  const cupoDataset = Math.max(0, limit - topPropios.length);
+  const topDataset: PrecioEncontrado[] = matchDataset.slice(0, cupoDataset).map((r) => ({
+    id: r.id,
+    descripcion: r.descripcion,
+    categoria: r.categoria,
+    proveedor: r.proveedor,
+    precio: r.precio,
+    codigo: r.codigo,
+    fuente: 'dataset',
+  }));
 
   return {
     termino: input.termino,
-    total_encontrados: resultados.length,
-    resultados: top.map((r) => ({
-      id: r.id,
-      descripcion: r.descripcion,
-      categoria: r.categoria,
-      proveedor: r.proveedor,
-      precio: r.precio,
-      codigo: r.codigo,
-    })),
-    region_usada: regionUsada,
+    total_encontrados: matchPropios.length + matchDataset.length,
+    resultados: [...topPropios, ...topDataset],
+    ...(propios.length > 0 ? { total_lista_propia: matchPropios.length } : {}),
+    ...(dataset
+      ? { total_dataset: matchDataset.length, region_usada: dataset.metadata.region }
+      : {
+          mensaje:
+            `No hay dataset regional para "${region}": los resultados provienen ` +
+            'únicamente de la lista propia cargada por el usuario. Aclaráselo.',
+        }),
   };
 }
 
 const schema: Anthropic.Tool = {
   name: 'buscar_precio',
   description:
-    'Busca materiales y sus precios en la lista actualizada de la región (default NOA: 825 items, 112 categorías). Busca por descripción, código o categoría. Devuelve hasta N resultados ordenados por relevancia.',
+    'Busca materiales y sus precios en la lista actualizada de la región (default NOA: 825 items, 112 categorías). Busca por descripción, código o categoría. Devuelve hasta N resultados ordenados por relevancia. Si el usuario cargó su propia lista de precios en la sesión, los resultados la incluyen primero, marcados con fuente "lista_propia"; los del dataset regional llevan fuente "dataset".',
   input_schema: {
     type: 'object',
     properties: {

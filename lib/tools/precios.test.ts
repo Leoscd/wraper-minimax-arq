@@ -59,6 +59,72 @@ describe('buscarPrecio', () => {
     expect(r.regiones_disponibles).toContain('NOA');
     expect(r.region_usada).toBeUndefined();
   });
+
+  it('resultados del dataset llevan fuente "dataset"', () => {
+    const r = buscarPrecio({ termino: 'loma negra' });
+    expect(r.resultados.every((x) => x.fuente === 'dataset')).toBe(true);
+    expect(r.total_lista_propia).toBeUndefined();
+  });
+});
+
+describe('buscarPrecio con precios propios (ToolContext)', () => {
+  const propios = [
+    { descripcion: 'Cemento portland x 50kg', precio: 14000, proveedor: 'Mi corralón' },
+    { descripcion: 'Cemento portland x 25kg', precio: 7500 },
+    { descripcion: 'Arena fina m3', precio: 22000, categoria: 'ARIDOS' },
+  ];
+
+  it('la lista propia va primero y el dataset complementa', () => {
+    const r = buscarPrecio({ termino: 'cemento', limit: 10 }, { preciosPropios: propios });
+    expect(r.total_lista_propia).toBe(2);
+    expect(r.total_dataset).toBeGreaterThan(0);
+    expect(r.resultados[0].fuente).toBe('lista_propia');
+    expect(r.resultados[1].fuente).toBe('lista_propia');
+    expect(r.resultados[2].fuente).toBe('dataset');
+    expect(r.resultados.length).toBe(2 + Math.min(r.total_dataset!, 8));
+    expect(r.region_usada).toContain('NOA');
+  });
+
+  it('los propios no se truncan a favor del dataset', () => {
+    const muchos = Array.from({ length: 5 }, (_, i) => ({
+      descripcion: `Cemento especial tipo ${i + 1}`,
+      precio: 1000 * (i + 1),
+    }));
+    const r = buscarPrecio({ termino: 'cemento', limit: 5 }, { preciosPropios: muchos });
+    expect(r.resultados).toHaveLength(5);
+    expect(r.resultados.every((x) => x.fuente === 'lista_propia')).toBe(true);
+    expect(r.total_dataset).toBeGreaterThan(0);
+  });
+
+  it('items propios llevan id sintético y defaults de proveedor', () => {
+    const r = buscarPrecio({ termino: 'arena fina' }, { preciosPropios: propios });
+    expect(r.resultados[0].id).toBe('PROPIO-0003');
+    expect(r.resultados[0].proveedor).toBe('Lista propia del usuario');
+    expect(r.resultados[0].categoria).toBe('ARIDOS');
+  });
+
+  it('el filtro por categoría también aplica a la lista propia', () => {
+    const r = buscarPrecio(
+      { termino: 'm3', categoria: 'aridos' },
+      { preciosPropios: propios }
+    );
+    const propiosEnResultado = r.resultados.filter((x) => x.fuente === 'lista_propia');
+    expect(propiosEnResultado).toHaveLength(1);
+    expect(propiosEnResultado[0].descripcion).toBe('Arena fina m3');
+  });
+
+  it('región desconocida CON lista propia busca solo en la propia, sin error', () => {
+    const r = buscarPrecio(
+      { termino: 'cemento', region: 'CUYO' },
+      { preciosPropios: propios }
+    );
+    expect(r.error).toBeUndefined();
+    expect(r.total_lista_propia).toBe(2);
+    expect(r.total_dataset).toBeUndefined();
+    expect(r.region_usada).toBeUndefined();
+    expect(r.mensaje).toContain('CUYO');
+    expect(r.resultados.every((x) => x.fuente === 'lista_propia')).toBe(true);
+  });
 });
 
 describe('getPreciosDataset', () => {

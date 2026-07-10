@@ -8,12 +8,24 @@
  */
 
 import type Anthropic from '@anthropic-ai/sdk';
+import type { PrecioPropio } from '../data/parse-lista';
+
+export type { PrecioPropio };
+
+/**
+ * Contexto por-request que el endpoint inyecta a las tools que lo necesitan.
+ * Nunca es estado global: viaja del body del request al ejecutor.
+ */
+export interface ToolContext {
+  /** Lista de precios propia del usuario (vale solo para su sesión). */
+  preciosPropios?: PrecioPropio[];
+}
 
 export interface Tool<TInput = unknown, TOutput = unknown> {
   name: string;
   description: string;
   schema: Anthropic.Tool;
-  execute: (input: TInput) => TOutput;
+  execute: (input: TInput, ctx?: ToolContext) => TOutput;
 }
 
 export interface HormigonInput {
@@ -157,13 +169,19 @@ export interface PrecioEncontrado {
   proveedor: string;
   precio: number;
   codigo: string;
+  /** De dónde salió el precio: lista cargada por el usuario o dataset regional. */
+  fuente: 'lista_propia' | 'dataset';
 }
 
 export interface BuscarPrecioOutput {
   termino: string;
   total_encontrados: number;
   resultados: PrecioEncontrado[];
-  /** Región del dataset consultado. Ausente si hubo error de región. */
+  /** Matches en la lista propia del usuario. Presente solo si cargó una. */
+  total_lista_propia?: number;
+  /** Matches en el dataset regional. Presente solo si se consultó un dataset. */
+  total_dataset?: number;
+  /** Región del dataset consultado. Ausente si hubo error o solo lista propia. */
   region_usada?: string;
   /** Presente cuando la región pedida no tiene dataset cargado. */
   error?: 'region_no_disponible';

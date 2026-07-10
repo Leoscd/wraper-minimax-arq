@@ -11,6 +11,7 @@
  * así el modelo recibe el feedback y puede corregir en la próxima iteración.
  */
 
+import type { ToolContext } from './types';
 import {
   calcularHormigon,
   calcularHierroLongitudinal,
@@ -25,7 +26,7 @@ import {
   generarEntregable,
 } from './index';
 
-export function ejecutarTool(nombre: string, input: unknown): unknown {
+export function ejecutarTool(nombre: string, input: unknown, ctx?: ToolContext): unknown {
   switch (nombre) {
     case 'calcular_hormigon':
       return calcularHormigon(input as Parameters<typeof calcularHormigon>[0]);
@@ -44,7 +45,7 @@ export function ejecutarTool(nombre: string, input: unknown): unknown {
         input as Parameters<typeof calcularMamposteria>[0]
       );
     case 'buscar_precio':
-      return buscarPrecio(input as Parameters<typeof buscarPrecio>[0]);
+      return buscarPrecio(input as Parameters<typeof buscarPrecio>[0], ctx);
     case 'calcular_mano_obra':
       return calcularManoObra(input as Parameters<typeof calcularManoObra>[0]);
     case 'aplicar_desperdicio':
