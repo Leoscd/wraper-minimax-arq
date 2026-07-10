@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { buscarPrecioWeb, parsearPrecio } from './precio-web';
+import { buscarPrecioWeb, parsearPrecio, extraerPrecio } from './precio-web';
 
 describe('parsearPrecio', () => {
   it('formato argentino: miles con punto y decimales con coma', () => {
@@ -20,12 +20,33 @@ describe('parsearPrecio', () => {
   });
 });
 
+describe('extraerPrecio', () => {
+  it('extrae precio con ancla $ y devuelve contexto', () => {
+    const r = extraerPrecio(
+      'Cemento pórtland compuesto CPC40 50 kg, $10.049,00 c/u Agregar al carro'
+    );
+    expect(r?.precio).toBe(10049);
+    expect(r?.contexto).toContain('$10.049,00');
+  });
+
+  it('extrae precio con ancla ARS pospuesta', () => {
+    const r = extraerPrecio('CEMENTO x 50KG LOMA NEGRA. 12.652,85 ARS Precio.');
+    expect(r?.precio).toBe(12652.85);
+  });
+
+  it('no confunde cantidades sin ancla de moneda ni montos chicos', () => {
+    expect(extraerPrecio('bolsa de 50 kg, rinde 25 litros')).toBeNull();
+    expect(extraerPrecio('envío $50 por unidad')).toBeNull();
+  });
+});
+
 describe('buscar_precio_web', () => {
   const fetchMock = vi.fn();
 
   beforeEach(() => {
     vi.stubGlobal('fetch', fetchMock);
-    vi.stubEnv('SERPER_API_KEY', 'test-key');
+    vi.stubEnv('SERPER_API_KEY', '');
+    vi.stubEnv('TAVILY_API_KEY', '');
   });
 
   afterEach(() => {
@@ -34,15 +55,15 @@ describe('buscar_precio_web', () => {
     fetchMock.mockReset();
   });
 
-  it('sin SERPER_API_KEY devuelve error estructurado, sin llamar a la API', async () => {
-    vi.stubEnv('SERPER_API_KEY', '');
+  it('sin ninguna key devuelve error estructurado, sin llamar a la API', async () => {
     const r = await buscarPrecioWeb({ termino: 'cemento portland 50kg' });
     expect(r.error).toBe('busqueda_web_no_configurada');
     expect(r.resultados).toEqual([]);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('mapea los resultados de Serper a precios estructurados con fuente web_retail', async () => {
+  it('con Serper mapea resultados de shopping con fuente web_retail', async () => {
+    vi.stubEnv('SERPER_API_KEY', 'test-key');
     fetchMock.mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -60,6 +81,7 @@ describe('buscar_precio_web', () => {
 
     const r = await buscarPrecioWeb({ termino: 'cemento portland 50kg' });
     expect(r.error).toBeUndefined();
+    expect(r.proveedor).toBe('serper');
     expect(r.total_encontrados).toBe(1);
     expect(r.resultados[0]).toMatchObject({
       descripcion: 'Cemento Portland Loma Negra 50kg',
@@ -72,7 +94,49 @@ describe('buscar_precio_web', () => {
     expect(r.mensaje).toContain('retail');
   });
 
+  it('con Tavily extrae el precio del contenido y usa el dominio como comercio', async () => {
+    vi.stubEnv('TAVILY_API_KEY', 'tvly-test');
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        results: [
+          {
+            title: 'Cemento pórtland compuesto CPC40 50 kg',
+            url: 'https://www.sodimac.com.ar/producto/103507X',
+            content: 'producto argentino de 50 kg, $10.049,00 c/u Agregar al carro',
+          },
+          {
+            title: 'Nota sin precios',
+            url: 'https://blog.com/nota',
+            content: 'el cemento es un material fundamental',
+          },
+        ],
+      }),
+    });
+
+    const r = await buscarPrecioWeb({ termino: 'cemento portland 50kg' });
+    expect(r.proveedor).toBe('tavily');
+    expect(r.total_encontrados).toBe(1);
+    expect(r.resultados[0]).toMatchObject({
+      precio: 10049,
+      comercio: 'sodimac.com.ar',
+      fuente: 'web_retail',
+    });
+    expect(r.resultados[0].contexto).toContain('$10.049,00');
+  });
+
+  it('con ambas keys prioriza Serper', async () => {
+    vi.stubEnv('SERPER_API_KEY', 'serper-key');
+    vi.stubEnv('TAVILY_API_KEY', 'tvly-test');
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ shopping: [] }) });
+
+    const r = await buscarPrecioWeb({ termino: 'cemento' });
+    expect(r.proveedor).toBe('serper');
+    expect(fetchMock.mock.calls[0][0]).toContain('serper.dev');
+  });
+
   it('respeta el limit', async () => {
+    vi.stubEnv('SERPER_API_KEY', 'test-key');
     const items = Array.from({ length: 8 }, (_, i) => ({
       title: `Item ${i}`,
       source: 'Tienda',
@@ -86,13 +150,15 @@ describe('buscar_precio_web', () => {
   });
 
   it('falla de red devuelve error estructurado sin tirar', async () => {
+    vi.stubEnv('TAVILY_API_KEY', 'tvly-test');
     fetchMock.mockRejectedValue(new Error('network'));
     const r = await buscarPrecioWeb({ termino: 'cemento' });
     expect(r.error).toBe('busqueda_web_fallo');
     expect(r.resultados).toEqual([]);
   });
 
-  it('respuesta no-ok de Serper devuelve error estructurado', async () => {
+  it('respuesta no-ok del proveedor devuelve error estructurado', async () => {
+    vi.stubEnv('SERPER_API_KEY', 'test-key');
     fetchMock.mockResolvedValue({ ok: false, status: 429 });
     const r = await buscarPrecioWeb({ termino: 'cemento' });
     expect(r.error).toBe('busqueda_web_fallo');

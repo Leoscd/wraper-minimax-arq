@@ -55,6 +55,7 @@ describe('ejecutarTool', () => {
 
   it('rutea buscar_precio_web (sin key devuelve error estructurado)', async () => {
     vi.stubEnv('SERPER_API_KEY', '');
+    vi.stubEnv('TAVILY_API_KEY', '');
     try {
       const r = (await ejecutarTool('buscar_precio_web', {
         termino: 'cemento portland 50kg',
