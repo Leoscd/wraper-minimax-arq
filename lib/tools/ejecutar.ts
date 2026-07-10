@@ -19,6 +19,7 @@ import {
   calcularMorteroRevoque,
   calcularMamposteria,
   buscarPrecio,
+  buscarPrecioWeb,
   calcularManoObra,
   aplicarDesperdicio,
   calcularCronograma,
@@ -26,7 +27,13 @@ import {
   generarEntregable,
 } from './index';
 
-export function ejecutarTool(nombre: string, input: unknown, ctx?: ToolContext): unknown {
+// Async porque buscar_precio_web hace fetch; las tools de cálculo siguen
+// siendo puras/síncronas y sus resultados se resuelven de inmediato.
+export async function ejecutarTool(
+  nombre: string,
+  input: unknown,
+  ctx?: ToolContext
+): Promise<unknown> {
   switch (nombre) {
     case 'calcular_hormigon':
       return calcularHormigon(input as Parameters<typeof calcularHormigon>[0]);
@@ -46,6 +53,8 @@ export function ejecutarTool(nombre: string, input: unknown, ctx?: ToolContext):
       );
     case 'buscar_precio':
       return buscarPrecio(input as Parameters<typeof buscarPrecio>[0], ctx);
+    case 'buscar_precio_web':
+      return buscarPrecioWeb(input as Parameters<typeof buscarPrecioWeb>[0]);
     case 'calcular_mano_obra':
       return calcularManoObra(input as Parameters<typeof calcularManoObra>[0]);
     case 'aplicar_desperdicio':

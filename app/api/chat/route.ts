@@ -175,7 +175,7 @@ export async function POST(req: NextRequest) {
       for (const block of toolUseBlocks) {
         toolsInvocadas.push(block.name);
         try {
-          const result = ejecutarTool(block.name, block.input, ctx);
+          const result = await ejecutarTool(block.name, block.input, ctx);
           if (esEntregable(result)) {
             entregables.push({
               id: result.id,
@@ -295,7 +295,7 @@ function streamChat({
             toolsInvocadas.push(block.name);
             send({ type: 'tool', name: block.name });
             try {
-              const result = ejecutarTool(block.name, block.input, ctx);
+              const result = await ejecutarTool(block.name, block.input, ctx);
               if (esEntregable(result)) {
                 send({
                   type: 'entregable',

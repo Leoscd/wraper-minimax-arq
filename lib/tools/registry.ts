@@ -21,6 +21,7 @@ import { calcularEstribosTool } from './estribos';
 import { calcularMorteroRevoqueTool } from './mortero';
 import { calcularMamposteriaTool } from './mamposteria';
 import { buscarPrecioTool } from './precios';
+import { buscarPrecioWebTool } from './precio-web';
 import { calcularManoObraTool } from './mano-obra';
 import { aplicarDesperdicioTool } from './desperdicios';
 import { calcularCronogramaTool } from './cronograma';
@@ -34,6 +35,7 @@ const allToolsList = [
   calcularMorteroRevoqueTool,
   calcularMamposteriaTool,
   buscarPrecioTool,
+  buscarPrecioWebTool,
   calcularManoObraTool,
   aplicarDesperdicioTool,
   calcularCronogramaTool,
@@ -58,6 +60,7 @@ export {
   calcularMorteroRevoqueTool,
   calcularMamposteriaTool,
   buscarPrecioTool,
+  buscarPrecioWebTool,
   calcularManoObraTool,
   aplicarDesperdicioTool,
   calcularCronogramaTool,
