@@ -8,7 +8,9 @@
  * - Markdown renderizado (react-markdown + GFM): nada de **, __, listas crudas.
  * - Layout abierto, sin "caja de diálogo": el asistente responde como texto
  *   corrido; el usuario va en una burbuja sutil.
- * - Composer con botón de adjuntar archivo (por ahora solo UI) + textarea.
+ * - Precios propios: el usuario puede cargar su lista (CSV con el botón de
+ *   adjuntar, o pegándola en el textarea). Se parsea en el cliente
+ *   (lib/data/parse-lista) y viaja con cada request; vale solo esta sesión.
  *
  * Mantiene el historial en estado local y lo manda completo en cada turno (el
  * server es stateless). Los chips de tools muestran de qué herramienta salió el
@@ -22,6 +24,11 @@ import {
   enviarChatStream,
   type ChatClientError,
 } from '@/lib/chat/client';
+import {
+  parseListaPrecios,
+  MAX_PRECIOS_PROPIOS,
+  type PrecioPropio,
+} from '@/lib/data/parse-lista';
 
 interface Entregable {
   id: string;
@@ -36,6 +43,14 @@ interface Mensaje {
   content: string;
   tools?: string[];
   entregables?: Entregable[];
+}
+
+/** Lista de precios propia cargada en esta sesión del navegador. */
+interface ListaPropia {
+  items: PrecioPropio[];
+  /** De dónde salió: nombre del archivo o "texto pegado". */
+  origen: string;
+  truncado: boolean;
 }
 
 const SUGERENCIAS = [
@@ -54,7 +69,13 @@ export default function Chat() {
   const [error, setError] = useState<string | null>(null);
   const [errorTipo, setErrorTipo] = useState<ChatClientError['tipo'] | null>(null);
   const [resetAt, setResetAt] = useState<string | null>(null);
-  const [archivo, setArchivo] = useState<File | null>(null);
+  const [listaPropia, setListaPropia] = useState<ListaPropia | null>(null);
+  const [parseAviso, setParseAviso] = useState<string | null>(null);
+  const [pastePendiente, setPastePendiente] = useState<{
+    texto: string;
+    items: PrecioPropio[];
+    truncado: boolean;
+  } | null>(null);
   const [ultimoInput, setUltimoInput] = useState<string | null>(null);
   const finRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -97,7 +118,6 @@ export default function Chat() {
     setError(null);
     setErrorTipo(null);
     setResetAt(null);
-    setArchivo(null);
     setUltimoInput(consulta);
 
     const historial: Mensaje[] = [...mensajes, { role: 'user', content: consulta }];
@@ -114,6 +134,7 @@ export default function Chat() {
     try {
       await enviarChatStream({
         messages: historial.map((m) => ({ role: m.role, content: m.content })),
+        preciosPropios: listaPropia?.items,
         signal: controller.signal,
         onEvent: (evento) => {
           if (evento.type === 'text') {
@@ -179,6 +200,47 @@ export default function Chat() {
 
   const cancelar = () => {
     abortRef.current?.abort();
+  };
+
+  /** Parsea y carga una lista de precios propia. Devuelve true si sirvió. */
+  const cargarLista = (texto: string, origen: string): boolean => {
+    const r = parseListaPrecios(texto);
+    if (r.items.length === 0) {
+      setParseAviso(
+        r.errores[0] ??
+          'No se pudo leer la lista. Formato esperado: descripción y precio por línea.'
+      );
+      return false;
+    }
+    setListaPropia({ items: r.items, origen, truncado: r.truncado });
+    setParseAviso(null);
+    return true;
+  };
+
+  const onArchivoSeleccionado = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // permite volver a elegir el mismo archivo
+    if (!file) return;
+    cargarLista(await file.text(), file.name);
+  };
+
+  /**
+   * Si el usuario pega algo con pinta de lista de precios (varias líneas que
+   * parsean a items), interceptamos el paste y le ofrecemos cargarla como sus
+   * precios en vez de meterla como texto del mensaje (que además supera el
+   * límite de 8000 caracteres con listas largas).
+   */
+  const onPaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const texto = e.clipboardData.getData('text');
+    const lineas = texto.split(/\r?\n/).filter((l) => l.trim().length > 0);
+    if (lineas.length < 3) return;
+    const r = parseListaPrecios(texto);
+    if (r.items.length >= 3) {
+      e.preventDefault();
+      setPastePendiente({ texto, items: r.items, truncado: r.truncado });
+    }
   };
 
   const onSubmit = (e: React.FormEvent) => {
@@ -318,16 +380,67 @@ export default function Chat() {
       </div>
 
       <form className="chat-form" onSubmit={onSubmit}>
-        {archivo && (
-          <div className="chat-adjunto">
-            <span className="chat-adjunto-nombre">📎 {archivo.name}</span>
+        {listaPropia && (
+          <div className="chat-adjunto" data-testid="lista-propia-banner">
+            <span className="chat-adjunto-nombre">
+              {listaPropia.items.length} precios propios cargados desde{' '}
+              {listaPropia.origen} — valen solo para esta sesión del navegador
+              {listaPropia.truncado &&
+                ` (se tomaron los primeros ${MAX_PRECIOS_PROPIOS})`}
+            </span>
             <button
               type="button"
               className="chat-adjunto-quitar"
-              onClick={() => setArchivo(null)}
-              aria-label="Quitar archivo"
+              onClick={() => setListaPropia(null)}
+              aria-label="Quitar lista de precios"
+            >
+              Quitar
+            </button>
+          </div>
+        )}
+        {parseAviso && (
+          <div className="chat-adjunto chat-adjunto-aviso" role="alert">
+            <span className="chat-adjunto-nombre">{parseAviso}</span>
+            <button
+              type="button"
+              className="chat-adjunto-quitar"
+              onClick={() => setParseAviso(null)}
+              aria-label="Cerrar aviso"
             >
               ✕
+            </button>
+          </div>
+        )}
+        {pastePendiente && (
+          <div className="chat-adjunto" data-testid="paste-prompt">
+            <span className="chat-adjunto-nombre">
+              Parece una lista de precios ({pastePendiente.items.length} items).
+              ¿Cómo la uso?
+            </span>
+            <button
+              type="button"
+              className="chat-adjunto-accion"
+              onClick={() => {
+                setListaPropia({
+                  items: pastePendiente.items,
+                  origen: 'texto pegado',
+                  truncado: pastePendiente.truncado,
+                });
+                setParseAviso(null);
+                setPastePendiente(null);
+              }}
+            >
+              Cargar como mis precios
+            </button>
+            <button
+              type="button"
+              className="chat-adjunto-accion"
+              onClick={() => {
+                setInput((prev) => prev + pastePendiente.texto);
+                setPastePendiente(null);
+              }}
+            >
+              Pegar como texto
             </button>
           </div>
         )}
@@ -336,8 +449,8 @@ export default function Chat() {
             type="button"
             className="chat-adjuntar"
             onClick={() => fileRef.current?.click()}
-            aria-label="Adjuntar archivo"
-            title="Adjuntar archivo"
+            aria-label="Cargar lista de precios (CSV)"
+            title="Cargar tu lista de precios (CSV o texto)"
             disabled={cargando}
           >
             +
@@ -346,7 +459,8 @@ export default function Chat() {
             ref={fileRef}
             type="file"
             hidden
-            onChange={(e) => setArchivo(e.target.files?.[0] ?? null)}
+            accept=".csv,.txt,text/csv,text/plain,text/tab-separated-values"
+            onChange={onArchivoSeleccionado}
           />
           <textarea
             ref={textareaRef}
@@ -354,6 +468,7 @@ export default function Chat() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={onKeyDown}
+            onPaste={onPaste}
             placeholder="Preguntá sobre precios, cómputos, obra…"
             rows={1}
             disabled={cargando}
@@ -653,6 +768,23 @@ export default function Chat() {
         }
         .chat-adjunto-quitar:hover {
           color: var(--light);
+        }
+        .chat-adjunto-aviso {
+          border-color: rgba(255, 80, 80, 0.4);
+          color: #ff9a9a;
+        }
+        .chat-adjunto-accion {
+          background: transparent;
+          border: 1px solid var(--gold-mid);
+          color: var(--gold);
+          padding: 4px 10px;
+          font-size: 12px;
+          border-radius: 6px;
+          cursor: pointer;
+          font-family: var(--font-inter), 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        }
+        .chat-adjunto-accion:hover {
+          background: rgba(201, 168, 76, 0.12);
         }
         .chat-composer {
           display: flex;

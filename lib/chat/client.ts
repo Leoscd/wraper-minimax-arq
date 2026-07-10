@@ -14,6 +14,8 @@
  * no responde.
  */
 
+import type { PrecioPropio } from '../data/parse-lista';
+
 export type ChatEvent =
   | { type: 'text'; delta: string }
   | { type: 'tool'; name: string }
@@ -31,6 +33,11 @@ export type ChatEvent =
 export interface ChatClientOptions {
   messages: Array<{ role: 'user' | 'assistant'; content: string }>;
   onEvent: (event: ChatEvent) => void;
+  /**
+   * Lista de precios propia del usuario (solo sesión). El server es stateless,
+   * así que viaja completa en cada request; solo la ven las tools.
+   */
+  preciosPropios?: PrecioPropio[];
   /** Timeout total del fetch+stream en ms. Default 60_000. */
   timeoutMs?: number;
   /** AbortSignal externo (p.ej. para que un componente cancele al desmontar). */
@@ -58,7 +65,13 @@ export function crearErrorCliente(
 export async function enviarChatStream(
   options: ChatClientOptions
 ): Promise<void> {
-  const { messages, onEvent, timeoutMs = 60_000, signal: externalSignal } = options;
+  const {
+    messages,
+    onEvent,
+    preciosPropios,
+    timeoutMs = 60_000,
+    signal: externalSignal,
+  } = options;
 
   // Combinar el AbortSignal externo con el timeout interno.
   const controller = new AbortController();
@@ -73,7 +86,10 @@ export async function enviarChatStream(
     res = await fetch('/api/chat?stream=1', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages }),
+      body: JSON.stringify({
+        messages,
+        ...(preciosPropios?.length ? { precios_propios: preciosPropios } : {}),
+      }),
       signal: controller.signal,
     });
   } catch (err) {
