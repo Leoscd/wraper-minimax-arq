@@ -62,22 +62,19 @@ function normalizarRegion(region: string): string {
     .replace(/[̀-ͯ]/g, '');
 }
 
+/** Regiones con dataset cargado (claves normalizadas del record DATASETS). */
+export function regionesDisponibles(): string[] {
+  return Object.keys(DATASETS);
+}
+
 /**
- * Devuelve el dataset de precios para la región pedida.
- * Si la región no existe, hace fallback al dataset por defecto (NOA) y avisa
- * con un console.warn en vez de tirar error: preferimos degradar a un
- * resultado útil antes que romper la generación.
+ * Devuelve el dataset de precios para la región pedida, o `null` si no hay
+ * dataset para esa región. Sin fallback silencioso: presentar precios de una
+ * región como si fueran de otra rompe el invariante de trazabilidad de los
+ * números; el que llama decide qué hacer (la tool devuelve un error
+ * estructurado para que el modelo se lo explique al usuario).
  */
-export function getPreciosDataset(region: string = REGION_DEFAULT): PreciosDataset {
+export function getPreciosDataset(region: string = REGION_DEFAULT): PreciosDataset | null {
   const key = normalizarRegion(region);
-  const dataset = DATASETS[key];
-
-  if (!dataset) {
-    console.warn(
-      `[precios] Región "${region}" no disponible. Usando fallback "${REGION_DEFAULT}".`
-    );
-    return DATASETS[REGION_DEFAULT];
-  }
-
-  return dataset;
+  return DATASETS[key] ?? null;
 }

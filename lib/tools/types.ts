@@ -163,8 +163,14 @@ export interface BuscarPrecioOutput {
   termino: string;
   total_encontrados: number;
   resultados: PrecioEncontrado[];
-  /** Región efectivamente usada para la búsqueda (puede diferir si hubo fallback). */
-  region_usada: string;
+  /** Región del dataset consultado. Ausente si hubo error de región. */
+  region_usada?: string;
+  /** Presente cuando la región pedida no tiene dataset cargado. */
+  error?: 'region_no_disponible';
+  region_pedida?: string;
+  regiones_disponibles?: string[];
+  /** Guía para el modelo sobre qué explicarle al usuario. */
+  mensaje?: string;
 }
 
 export interface ManoObraInput {

@@ -11,7 +11,7 @@
 
 import type Anthropic from '@anthropic-ai/sdk';
 import type { Tool, BuscarPrecioInput, BuscarPrecioOutput } from './types';
-import { getPreciosDataset, REGION_DEFAULT } from '../data/precios';
+import { getPreciosDataset, regionesDisponibles, REGION_DEFAULT } from '../data/precios';
 
 function normalizar(texto: string): string {
   return texto
@@ -23,6 +23,23 @@ function normalizar(texto: string): string {
 function calcular(input: BuscarPrecioInput): BuscarPrecioOutput {
   const region = input.region ?? REGION_DEFAULT;
   const dataset = getPreciosDataset(region);
+
+  if (!dataset) {
+    return {
+      termino: input.termino,
+      total_encontrados: 0,
+      resultados: [],
+      error: 'region_no_disponible',
+      region_pedida: region,
+      regiones_disponibles: regionesDisponibles(),
+      mensaje:
+        'No hay dataset de precios cargado para esa región. Explicale al usuario ' +
+        'que no tenés datos de esa región y ofrecele: (a) cargar su propia lista ' +
+        'de precios (adjuntando un CSV o pegándola en el chat), o (b) consultar ' +
+        'la lista NOA aclarando que es de otra región.',
+    };
+  }
+
   const items = dataset.items;
   const regionUsada = dataset.metadata.region;
 
@@ -94,7 +111,7 @@ const schema: Anthropic.Tool = {
       region: {
         type: 'string',
         description:
-          'Región de la lista de precios a consultar. Opcional. Default: "NOA". Si la región no existe se usa NOA como fallback.',
+          'Región de la lista de precios a consultar. Opcional. Default: "NOA". Si no hay dataset para la región pedida, la tool devuelve error "region_no_disponible" con las regiones disponibles (no hace fallback).',
         default: 'NOA',
       },
     },
