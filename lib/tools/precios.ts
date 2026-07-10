@@ -19,7 +19,12 @@ import type {
   BuscarPrecioOutput,
   PrecioEncontrado,
 } from './types';
-import { getPreciosDataset, regionesDisponibles, REGION_DEFAULT } from '../data/precios';
+import {
+  getPreciosDataset,
+  regionesDisponibles,
+  resolverRegion,
+  REGION_DEFAULT,
+} from '../data/precios';
 
 function normalizar(texto: string): string {
   return texto
@@ -50,23 +55,30 @@ function filtrar<T extends { descripcion: string; categoria?: string; codigo?: s
 }
 
 function calcular(input: BuscarPrecioInput, ctx?: ToolContext): BuscarPrecioOutput {
-  const region = input.region ?? REGION_DEFAULT;
+  const pedida = input.region ?? REGION_DEFAULT;
+  const { region, provincia } = resolverRegion(pedida);
   const dataset = getPreciosDataset(region);
   const propios = ctx?.preciosPropios ?? [];
 
   if (!dataset && propios.length === 0) {
+    const contexto = provincia
+      ? `La provincia ${provincia} pertenece a la región ${region}, que todavía no tiene dataset de precios. `
+      : 'No hay dataset de precios cargado para esa región. ';
     return {
       termino: input.termino,
       total_encontrados: 0,
       resultados: [],
       error: 'region_no_disponible',
-      region_pedida: region,
+      region_pedida: pedida,
+      region_resuelta: region,
+      ...(provincia ? { provincia } : {}),
       regiones_disponibles: regionesDisponibles(),
       mensaje:
-        'No hay dataset de precios cargado para esa región. Explicale al usuario ' +
-        'que no tenés datos de esa región y ofrecele: (a) cargar su propia lista ' +
-        'de precios (adjuntando un CSV o pegándola en el chat), o (b) consultar ' +
-        'la lista NOA aclarando que es de otra región.',
+        contexto +
+        'Explicale al usuario (nombrando la región que le corresponde si pidió ' +
+        'una provincia) y ofrecele: (a) cargar su propia lista de precios ' +
+        '(adjuntando un CSV o pegándola en el chat), o (b) consultar la lista ' +
+        'NOA aclarando que es de otra región.',
     };
   }
 
@@ -152,7 +164,7 @@ const schema: Anthropic.Tool = {
       region: {
         type: 'string',
         description:
-          'Región de la lista de precios a consultar. Opcional. Default: "NOA". Si no hay dataset para la región pedida, la tool devuelve error "region_no_disponible" con las regiones disponibles (no hace fallback).',
+          'Región o provincia argentina de la lista de precios a consultar. Opcional. Default: "NOA". Acepta regiones (NOA, NEA, Centro, Cuyo, Patagonia) o nombres de provincia ("Neuquén" resuelve a Patagonia, "Salta" a NOA). Si no hay dataset para la región resuelta, la tool devuelve error "region_no_disponible" con la región a la que pertenece la provincia y las regiones disponibles (no hace fallback).',
         default: 'NOA',
       },
     },

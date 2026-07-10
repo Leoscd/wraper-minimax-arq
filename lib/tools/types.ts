@@ -186,6 +186,10 @@ export interface BuscarPrecioOutput {
   /** Presente cuando la región pedida no tiene dataset cargado. */
   error?: 'region_no_disponible';
   region_pedida?: string;
+  /** Región canónica a la que se resolvió lo pedido (provincia o alias). */
+  region_resuelta?: string;
+  /** Presente si lo pedido era una provincia (ej. "Neuquén" → PATAGONIA). */
+  provincia?: string;
   regiones_disponibles?: string[];
   /** Guía para el modelo sobre qué explicarle al usuario. */
   mensaje?: string;

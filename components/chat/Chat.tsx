@@ -453,7 +453,9 @@ export default function Chat() {
             title="Cargar tu lista de precios (CSV o texto)"
             disabled={cargando}
           >
-            +
+            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M8 2.5v11M2.5 8h11" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
           </button>
           <input
             ref={fileRef}
@@ -481,7 +483,9 @@ export default function Chat() {
               aria-label="Cancelar"
               title="Detener la respuesta"
             >
-              ⏹
+              <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+                <rect x="1" y="1" width="10" height="10" rx="2" fill="currentColor" />
+              </svg>
             </button>
           ) : (
             <button
@@ -490,7 +494,16 @@ export default function Chat() {
               disabled={!input.trim()}
               aria-label="Enviar"
             >
-              ↑
+              <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                <path
+                  d="M8 13V3m0 0L3.5 7.5M8 3l4.5 4.5"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  fill="none"
+                />
+              </svg>
             </button>
           )}
         </div>
@@ -807,8 +820,6 @@ export default function Chat() {
           background: transparent;
           border: 1px solid var(--gold-mid);
           color: var(--gold);
-          font-size: 20px;
-          line-height: 1;
           cursor: pointer;
           display: flex;
           align-items: center;
@@ -822,11 +833,13 @@ export default function Chat() {
           flex: 1;
           background: transparent;
           border: none;
-          padding: 7px 4px;
+          /* 22px de línea + 6px arriba/abajo = 34px, la altura de los botones:
+             con una sola línea todo queda alineado, con varias crece hacia arriba. */
+          padding: 6px 4px;
           color: var(--light);
           font-size: 15px;
           font-family: var(--font-inter), 'Helvetica Neue', Helvetica, Arial, sans-serif;
-          line-height: 1.5;
+          line-height: 22px;
           outline: none;
           resize: none;
           max-height: 200px;
@@ -842,8 +855,6 @@ export default function Chat() {
           background: var(--gold);
           color: var(--dark);
           border: none;
-          font-size: 18px;
-          font-weight: 700;
           cursor: pointer;
           display: flex;
           align-items: center;

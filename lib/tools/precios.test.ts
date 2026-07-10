@@ -60,6 +60,29 @@ describe('buscarPrecio', () => {
     expect(r.region_usada).toBeUndefined();
   });
 
+  it('una provincia resuelve a su región y el error la nombra', () => {
+    const r = buscarPrecio({ termino: 'loma negra', region: 'Neuquén' });
+    expect(r.error).toBe('region_no_disponible');
+    expect(r.region_pedida).toBe('Neuquén');
+    expect(r.region_resuelta).toBe('PATAGONIA');
+    expect(r.provincia).toBe('Neuquén');
+    expect(r.mensaje).toContain('PATAGONIA');
+  });
+
+  it('una provincia del NOA usa el dataset NOA directamente', () => {
+    const r = buscarPrecio({ termino: 'loma negra', region: 'Salta' });
+    expect(r.error).toBeUndefined();
+    expect(r.total_encontrados).toBeGreaterThan(0);
+    expect(r.region_usada).toContain('NOA');
+  });
+
+  it('un alias de región resuelve a la canónica', () => {
+    const r = buscarPrecio({ termino: 'loma negra', region: 'Patagónica' });
+    expect(r.error).toBe('region_no_disponible');
+    expect(r.region_resuelta).toBe('PATAGONIA');
+    expect(r.provincia).toBeUndefined();
+  });
+
   it('resultados del dataset llevan fuente "dataset"', () => {
     const r = buscarPrecio({ termino: 'loma negra' });
     expect(r.resultados.every((x) => x.fuente === 'dataset')).toBe(true);
@@ -141,6 +164,11 @@ describe('getPreciosDataset', () => {
 
   it('región desconocida devuelve null (sin fallback)', () => {
     expect(getPreciosDataset('REGION_QUE_NO_EXISTE')).toBeNull();
+  });
+
+  it('una provincia del NOA resuelve al dataset NOA', () => {
+    const ds = getPreciosDataset('Santiago del Estero');
+    expect(ds?.metadata.region).toContain('NOA');
   });
 
   it('regionesDisponibles lista las regiones cargadas', () => {
