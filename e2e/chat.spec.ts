@@ -1,18 +1,22 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Chat asistente (/asistente)', () => {
-  test('carga con sugerencias en estado vacío', async ({ page }) => {
+  test('carga con el texto de capacidades en estado vacío', async ({
+    page,
+  }) => {
     await page.goto('/asistente');
 
     await expect(page.getByPlaceholder(/Preguntá sobre/i)).toBeVisible();
 
-    await expect(
-      page.getByRole('button', { name: /bolsas de 50kg/i })
-    ).toBeVisible();
-
-    await expect(
-      page.getByRole('button', { name: /losa H-21/i })
-    ).toBeVisible();
+    // El estado vacío explica qué puede hacer el asistente, sin chips.
+    await expect(page.getByText(/herramientas determinísticas/i)).toBeVisible();
+    const terminos = page.locator('.chat-capacidad dt');
+    await expect(terminos).toHaveText([
+      'Precios',
+      'Cómputos',
+      'Obra',
+      'Entregables',
+    ]);
   });
 
   test('input vacío deshabilita el botón Enviar', async ({ page }) => {
@@ -26,7 +30,7 @@ test.describe('Chat asistente (/asistente)', () => {
     await expect(enviar).toBeEnabled();
   });
 
-  test('click en sugerencia la envía y muestra la respuesta + chips de tools', async ({
+  test('enviar una consulta muestra la respuesta + chips de tools', async ({
     page,
   }) => {
     // Mockeamos /api/chat (streaming SSE) para que el test sea determinístico y
@@ -48,9 +52,12 @@ test.describe('Chat asistente (/asistente)', () => {
 
     await page.goto('/asistente');
 
-    await page.getByRole('button', { name: /bolsas de 50kg/i }).click();
+    await page
+      .getByPlaceholder(/Preguntá sobre/i)
+      .fill('¿Cuántas bolsas de 50kg de cemento lleva un m³ de H-21?');
+    await page.getByRole('button', { name: /Enviar/i }).click();
 
-    // El mensaje del usuario aparece (texto de la sugerencia).
+    // El mensaje del usuario aparece.
     await expect(
       page.getByText(/bolsas de 50kg de cemento lleva un m³/i)
     ).toBeVisible();

@@ -53,13 +53,27 @@ interface ListaPropia {
   truncado: boolean;
 }
 
-const SUGERENCIAS = [
-  '¿Cuánto sale el m² de losa H-21 de 12cm en Tucumán?',
-  '¿Cuántas bolsas de 50kg de cemento lleva un m³ de hormigón H-21?',
-  'Dame el precio actual de la barra de hierro del 12',
-  '¿Cuánta mano de obra lleva levantar 50 m² de mampostería de ladrillo hueco?',
-  '¿Qué desperdicio conviene prever para cerámicos en diagonal?',
-  'Necesito un cronograma de 3 tareas: fundaciones 5 días, estructura 15 días, revoques 8 días. ¿Cuándo arrancan las revoques?',
+const CAPACIDADES = [
+  {
+    termino: 'Precios',
+    detalle:
+      'Materiales por región o provincia, de la lista NOA o de tu propia lista: adjuntá un CSV o pegala en el chat y cada precio cita su fuente.',
+  },
+  {
+    termino: 'Cómputos',
+    detalle:
+      'Hormigón, hierro, estribos, mampostería, morteros y el desperdicio que conviene prever en cada rubro.',
+  },
+  {
+    termino: 'Obra',
+    detalle:
+      'Horas de mano de obra por tarea, cronogramas con fechas de arranque y curvas de inversión.',
+  },
+  {
+    termino: 'Entregables',
+    detalle:
+      'Presupuestos técnicos generados en la conversación, listos para abrir y compartir.',
+  },
 ];
 
 export default function Chat() {
@@ -264,23 +278,19 @@ export default function Chat() {
       <div className="chat-mensajes">
         {mensajes.length === 0 && !cargando && (
           <div className="chat-vacio">
-            <p className="chat-vacio-titulo">¿En qué te doy una mano hoy?</p>
             <p className="chat-vacio-sub">
-              Precios, cómputos, mano de obra, cronogramas. Los números salen de
-              herramientas determinísticas, no inventados.
+              Los cálculos salen de herramientas determinísticas — nada se
+              inventa — y cada precio cita de qué lista salió. Esto es lo que
+              podés pedirle:
             </p>
-            <div className="chat-sugerencias">
-              {SUGERENCIAS.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  className="chat-chip"
-                  onClick={() => enviar(s)}
-                >
-                  {s}
-                </button>
+            <dl className="chat-capacidades">
+              {CAPACIDADES.map((c) => (
+                <div key={c.termino} className="chat-capacidad">
+                  <dt>{c.termino}</dt>
+                  <dd>{c.detalle}</dd>
+                </div>
               ))}
-            </div>
+            </dl>
           </div>
         )}
 
@@ -310,7 +320,7 @@ export default function Chat() {
                   <div className="chat-tools">
                     {m.tools.map((t) => (
                       <span key={t} className="chat-tool-badge">
-                        🔧 {t}
+                        {t}
                       </span>
                     ))}
                   </div>
@@ -326,7 +336,16 @@ export default function Chat() {
                         className="chat-entregable"
                       >
                         <span className="chat-entregable-icono">
-                          {e.tipo === 'presupuesto' ? '📋' : e.tipo === 'cronograma' ? '📅' : e.tipo === 'curva' ? '📈' : '📄'}
+                          <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+                            <path
+                              d="M4 1.5h7L15 5.5V15a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 3 15V3A1.5 1.5 0 0 1 4.5 1.5Z M11 1.5v4h4"
+                              stroke="currentColor"
+                              strokeWidth="1.3"
+                              strokeLinejoin="round"
+                              fill="none"
+                            />
+                            <path d="M6 9.5h6M6 12.5h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                          </svg>
                         </span>
                         <span className="chat-entregable-info">
                           <span className="chat-entregable-titulo">
@@ -531,41 +550,48 @@ export default function Chat() {
         }
         .chat-vacio {
           margin: auto;
-          text-align: center;
           max-width: 560px;
-        }
-        .chat-vacio-titulo {
-          font-family: var(--serif);
-          font-size: 30px;
-          color: var(--light);
-          margin-bottom: 10px;
+          padding: 0 12px;
         }
         .chat-vacio-sub {
           font-size: 14px;
           color: var(--text-muted);
-          margin-bottom: 28px;
-          line-height: 1.6;
+          margin-bottom: 24px;
+          line-height: 1.65;
+          max-width: 52ch;
         }
-        .chat-sugerencias {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 10px;
-          justify-content: center;
+        /* Capacidades: término dorado + detalle, separados por hairlines. */
+        .chat-capacidades {
+          margin: 0;
         }
-        .chat-chip {
-          background: transparent;
-          border: 1px solid var(--gold-mid);
+        .chat-capacidad {
+          display: grid;
+          grid-template-columns: 118px 1fr;
+          gap: 16px;
+          padding: 14px 0;
+          border-top: 1px solid rgba(201, 168, 76, 0.16);
+        }
+        .chat-capacidad:last-child {
+          border-bottom: 1px solid rgba(201, 168, 76, 0.16);
+        }
+        .chat-capacidad dt {
+          font-size: 11px;
+          letter-spacing: 2px;
+          text-transform: uppercase;
           color: var(--gold);
-          padding: 10px 14px;
-          font-size: 12.5px;
-          border-radius: 20px;
-          cursor: pointer;
-          transition: background 0.2s;
-          text-align: left;
-          font-family: var(--font-inter), 'Helvetica Neue', Helvetica, Arial, sans-serif;
+          padding-top: 3px;
         }
-        .chat-chip:hover {
-          background: rgba(201, 168, 76, 0.1);
+        .chat-capacidad dd {
+          margin: 0;
+          font-size: 13.5px;
+          line-height: 1.6;
+          color: var(--text);
+        }
+        @media (max-width: 520px) {
+          .chat-capacidad {
+            grid-template-columns: 1fr;
+            gap: 4px;
+          }
         }
         .chat-msg {
           display: flex;
@@ -632,8 +658,9 @@ export default function Chat() {
           transform: translateY(-1px);
         }
         .chat-entregable-icono {
-          font-size: 22px;
-          line-height: 1;
+          display: flex;
+          align-items: center;
+          color: var(--gold);
           flex-shrink: 0;
         }
         .chat-entregable-info {
