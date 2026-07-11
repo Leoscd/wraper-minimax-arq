@@ -70,6 +70,11 @@ const CAPACIDADES = [
       'Horas de mano de obra por tarea, cronogramas con fechas de arranque y curvas de inversión.',
   },
   {
+    termino: 'Profesionales',
+    detalle:
+      'Empresas y oficios por zona — plomeros, electricistas, herreros, techistas — con contacto y reseñas, citando la fuente.',
+  },
+  {
     termino: 'Entregables',
     detalle:
       'Presupuestos técnicos generados en la conversación, listos para abrir y compartir.',

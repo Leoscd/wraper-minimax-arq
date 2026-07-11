@@ -48,6 +48,10 @@ export {
   buscarPrecioWebTool,
 } from './precio-web';
 export {
+  buscarProfesionales,
+  buscarProfesionalesTool,
+} from './profesionales';
+export {
   calcularManoObra,
   calcularManoObraTool,
   CARGAS_SOCIALES_REFERENCIA,

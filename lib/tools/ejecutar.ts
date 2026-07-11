@@ -20,6 +20,7 @@ import {
   calcularMamposteria,
   buscarPrecio,
   buscarPrecioWeb,
+  buscarProfesionales,
   calcularManoObra,
   aplicarDesperdicio,
   calcularCronograma,
@@ -55,6 +56,10 @@ export async function ejecutarTool(
       return buscarPrecio(input as Parameters<typeof buscarPrecio>[0], ctx);
     case 'buscar_precio_web':
       return buscarPrecioWeb(input as Parameters<typeof buscarPrecioWeb>[0]);
+    case 'buscar_profesionales':
+      return buscarProfesionales(
+        input as Parameters<typeof buscarProfesionales>[0]
+      );
     case 'calcular_mano_obra':
       return calcularManoObra(input as Parameters<typeof calcularManoObra>[0]);
     case 'aplicar_desperdicio':

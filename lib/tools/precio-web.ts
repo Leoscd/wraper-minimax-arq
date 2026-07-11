@@ -304,7 +304,7 @@ export function resolverPais(entrada?: string): PaisBusqueda | null {
 }
 
 /** Lista legible de países soportados para mensajes de error y schema. */
-const PAISES_SOPORTADOS = Object.values(PAISES)
+export const PAISES_SOPORTADOS = Object.values(PAISES)
   .map((p) => p.nombre)
   .sort((a, b) => a.localeCompare(b, 'es'))
   .join(', ');
@@ -469,7 +469,7 @@ async function buscarSerper(
   return resultados;
 }
 
-function hostname(url: string): string {
+export function hostname(url: string): string {
   try {
     return new URL(url).hostname.replace(/^www\./, '');
   } catch {
