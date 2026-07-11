@@ -41,7 +41,7 @@ export interface HormigonOutput {
   volumen_m3: number;
   materiales: {
     cemento_kg: number;
-    cemento_bolsas_50kg: number;
+    cemento_bolsas_25kg: number;
     arena_gruesa_m3: number;
     ripio_m3: number;
     agua_litros: number;

@@ -227,7 +227,7 @@ describe('POST /api/chat', () => {
         toolUseResponse([{ id: 'h1', name: 'calcular_hormigon', input: { volumen_m3: 5, clase: 'H-21' } }])
       )
       .mockResolvedValueOnce(textResponse('Necesitás 8 bolsas de cemento.'));
-    ejecutarTool.mockReturnValue({ cemento_bolsas_50kg: 8 });
+    ejecutarTool.mockReturnValue({ cemento_bolsas_25kg: 16 });
 
     const resB = await POST(makeReq(historial));
     const dataB = await resB.json();

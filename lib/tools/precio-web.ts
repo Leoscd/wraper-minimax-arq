@@ -6,17 +6,24 @@
  * búsqueda (no un scraper propio: nada de HTML frágil ni problemas de
  * términos de uso) y devuelve resultados estructurados.
  *
+ * Cubre toda Latinoamérica: el parámetro `pais` (default Argentina) elige la
+ * configuración de búsqueda (código de país de Google, país de Tavily) y de
+ * moneda (anclas para extraer precios del texto, moneda local del resultado).
+ * `lugar` enfoca la búsqueda en una provincia/departamento/ciudad; la
+ * geografía (qué lugar pertenece a qué país) la resuelve el modelo, no esta
+ * tool.
+ *
  * Proveedores soportados (se elige por env, en este orden):
- * - `SERPER_API_KEY` → Serper.dev, endpoint /shopping (Google Shopping AR):
- *   precio ya estructurado por resultado.
+ * - `SERPER_API_KEY` → Serper.dev, endpoint /shopping (Google Shopping del
+ *   país): precio ya estructurado por resultado.
  * - `TAVILY_API_KEY` → Tavily search: el precio se extrae del texto del
  *   resultado con `extraerPrecio` y se acompaña del fragmento de contexto.
  *
- * **Invariante de trazabilidad:** cada precio viaja con comercio, URL y fecha
- * de consulta, y la fuente es siempre `web_retail`. Son precios minoristas
- * online — NO precios de corralón/mayorista de obra — y el asistente debe
- * presentarlos como referencia, nunca mezclados en silencio con el dataset
- * regional o la lista propia.
+ * **Invariante de trazabilidad:** cada precio viaja con comercio, URL, fecha
+ * de consulta y moneda local, y la fuente es siempre `web_retail`. Son precios
+ * minoristas online — NO precios de corralón/mayorista de obra — y el
+ * asistente debe presentarlos como referencia, nunca mezclados en silencio
+ * con el dataset regional o la lista propia.
  *
  * Sin ninguna key la tool devuelve un error estructurado para que el modelo
  * lo explique sin inventar precios.
@@ -27,13 +34,16 @@ import type { Tool } from './types';
 
 export interface BuscarPrecioWebInput {
   termino: string;
+  pais?: string;
+  lugar?: string;
   limit?: number;
 }
 
 export interface PrecioWebEncontrado {
   descripcion: string;
   precio: number;
-  moneda: 'ARS';
+  /** Moneda local del país buscado (ARS, UYU, BRL, USD...). */
+  moneda: string;
   comercio: string;
   url: string;
   fuente: 'web_retail';
@@ -43,14 +53,261 @@ export interface PrecioWebEncontrado {
 
 export interface BuscarPrecioWebOutput {
   termino: string;
+  pais?: string;
+  lugar?: string;
   total_encontrados: number;
   resultados: PrecioWebEncontrado[];
   fecha_consulta?: string;
   proveedor?: 'serper' | 'tavily';
-  error?: 'busqueda_web_no_configurada' | 'busqueda_web_fallo';
+  error?:
+    | 'busqueda_web_no_configurada'
+    | 'busqueda_web_fallo'
+    | 'pais_no_soportado';
   /** Guía para el modelo sobre cómo presentar (o no) estos precios. */
   mensaje?: string;
 }
+
+/** Configuración de búsqueda y moneda de un país soportado. */
+export interface PaisBusqueda {
+  /** Nombre canónico para mostrar y para armar la query. */
+  nombre: string;
+  /** Código de país de Google (parámetro `gl` de Serper). */
+  gl: string;
+  /** Nombre de país que acepta Tavily en `country` (inglés, minúsculas). */
+  tavily: string;
+  /** Moneda en la que se expresan los precios retail online del país. */
+  moneda: string;
+  /** Anclas de moneda que preceden al número ("$", "R$", "Gs."...). */
+  prefijos: string[];
+  /** Códigos/palabras de moneda que siguen al número ("ARS", "soles"...). */
+  sufijos: string[];
+  /** Monto mínimo plausible para un material; filtra ruido tipo "50 kg". */
+  precio_minimo: number;
+  /** Idioma de la query de búsqueda. */
+  idioma: 'es' | 'pt';
+}
+
+/**
+ * Países LATAM soportados, claves normalizadas (mayúsculas, sin acentos).
+ * En Ecuador, El Salvador, Panamá y Venezuela el retail online cotiza en USD
+ * (dolarizados de jure o de facto).
+ */
+export const PAISES: Record<string, PaisBusqueda> = {
+  ARGENTINA: {
+    nombre: 'Argentina',
+    gl: 'ar',
+    tavily: 'argentina',
+    moneda: 'ARS',
+    prefijos: ['AR$', '$'],
+    sufijos: ['ARS'],
+    precio_minimo: 100,
+    idioma: 'es',
+  },
+  BOLIVIA: {
+    nombre: 'Bolivia',
+    gl: 'bo',
+    tavily: 'bolivia',
+    moneda: 'BOB',
+    prefijos: ['Bs.', 'Bs'],
+    sufijos: ['BOB', 'bolivianos'],
+    precio_minimo: 5,
+    idioma: 'es',
+  },
+  BRASIL: {
+    nombre: 'Brasil',
+    gl: 'br',
+    tavily: 'brazil',
+    moneda: 'BRL',
+    prefijos: ['R$'],
+    sufijos: ['BRL', 'reais'],
+    precio_minimo: 3,
+    idioma: 'pt',
+  },
+  CHILE: {
+    nombre: 'Chile',
+    gl: 'cl',
+    tavily: 'chile',
+    moneda: 'CLP',
+    prefijos: ['$'],
+    sufijos: ['CLP'],
+    precio_minimo: 500,
+    idioma: 'es',
+  },
+  COLOMBIA: {
+    nombre: 'Colombia',
+    gl: 'co',
+    tavily: 'colombia',
+    moneda: 'COP',
+    prefijos: ['COL$', '$'],
+    sufijos: ['COP'],
+    precio_minimo: 1000,
+    idioma: 'es',
+  },
+  'COSTA RICA': {
+    nombre: 'Costa Rica',
+    gl: 'cr',
+    tavily: 'costa rica',
+    moneda: 'CRC',
+    prefijos: ['₡', 'CRC'],
+    sufijos: ['CRC', 'colones'],
+    precio_minimo: 500,
+    idioma: 'es',
+  },
+  ECUADOR: {
+    nombre: 'Ecuador',
+    gl: 'ec',
+    tavily: 'ecuador',
+    moneda: 'USD',
+    prefijos: ['US$', 'USD', '$'],
+    sufijos: ['USD'],
+    precio_minimo: 1,
+    idioma: 'es',
+  },
+  'EL SALVADOR': {
+    nombre: 'El Salvador',
+    gl: 'sv',
+    tavily: 'el salvador',
+    moneda: 'USD',
+    prefijos: ['US$', 'USD', '$'],
+    sufijos: ['USD'],
+    precio_minimo: 1,
+    idioma: 'es',
+  },
+  GUATEMALA: {
+    nombre: 'Guatemala',
+    gl: 'gt',
+    tavily: 'guatemala',
+    moneda: 'GTQ',
+    prefijos: ['Q.', 'Q'],
+    sufijos: ['GTQ', 'quetzales'],
+    precio_minimo: 5,
+    idioma: 'es',
+  },
+  HONDURAS: {
+    nombre: 'Honduras',
+    gl: 'hn',
+    tavily: 'honduras',
+    moneda: 'HNL',
+    prefijos: ['Lps.', 'Lps', 'L.', 'L'],
+    sufijos: ['HNL', 'lempiras'],
+    precio_minimo: 20,
+    idioma: 'es',
+  },
+  MEXICO: {
+    nombre: 'México',
+    gl: 'mx',
+    tavily: 'mexico',
+    moneda: 'MXN',
+    prefijos: ['$'],
+    sufijos: ['MXN'],
+    precio_minimo: 20,
+    idioma: 'es',
+  },
+  NICARAGUA: {
+    nombre: 'Nicaragua',
+    gl: 'ni',
+    tavily: 'nicaragua',
+    moneda: 'NIO',
+    prefijos: ['C$'],
+    sufijos: ['NIO', 'cordobas'],
+    precio_minimo: 30,
+    idioma: 'es',
+  },
+  PANAMA: {
+    nombre: 'Panamá',
+    gl: 'pa',
+    tavily: 'panama',
+    moneda: 'USD',
+    prefijos: ['B/.', 'US$', 'USD', '$'],
+    sufijos: ['USD', 'PAB'],
+    precio_minimo: 1,
+    idioma: 'es',
+  },
+  PARAGUAY: {
+    nombre: 'Paraguay',
+    gl: 'py',
+    tavily: 'paraguay',
+    moneda: 'PYG',
+    prefijos: ['₲', 'Gs.', 'Gs'],
+    sufijos: ['PYG', 'guaranies'],
+    precio_minimo: 1000,
+    idioma: 'es',
+  },
+  PERU: {
+    nombre: 'Perú',
+    gl: 'pe',
+    tavily: 'peru',
+    moneda: 'PEN',
+    prefijos: ['S/.', 'S/'],
+    sufijos: ['PEN', 'soles'],
+    precio_minimo: 3,
+    idioma: 'es',
+  },
+  'REPUBLICA DOMINICANA': {
+    nombre: 'República Dominicana',
+    gl: 'do',
+    tavily: 'dominican republic',
+    moneda: 'DOP',
+    prefijos: ['RD$', '$'],
+    sufijos: ['DOP'],
+    precio_minimo: 50,
+    idioma: 'es',
+  },
+  URUGUAY: {
+    nombre: 'Uruguay',
+    gl: 'uy',
+    tavily: 'uruguay',
+    moneda: 'UYU',
+    prefijos: ['$U', '$'],
+    sufijos: ['UYU'],
+    precio_minimo: 20,
+    idioma: 'es',
+  },
+  VENEZUELA: {
+    nombre: 'Venezuela',
+    gl: 've',
+    tavily: 'venezuela',
+    moneda: 'USD',
+    prefijos: ['US$', 'USD', '$'],
+    sufijos: ['USD'],
+    precio_minimo: 1,
+    idioma: 'es',
+  },
+};
+
+/** Nombres alternativos con los que puede llegar un país. */
+const ALIAS_PAIS: Record<string, string> = {
+  BRAZIL: 'BRASIL',
+  MEJICO: 'MEXICO',
+  DOMINICANA: 'REPUBLICA DOMINICANA',
+  'SANTO DOMINGO': 'REPUBLICA DOMINICANA',
+};
+
+export const PAIS_DEFAULT = PAISES.ARGENTINA;
+
+function normalizarPais(entrada: string): string {
+  return entrada
+    .trim()
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '');
+}
+
+/**
+ * Resuelve el nombre de país (con o sin acentos, alias en inglés) a su
+ * configuración. Sin entrada devuelve Argentina; si no se reconoce, null.
+ */
+export function resolverPais(entrada?: string): PaisBusqueda | null {
+  if (!entrada || !entrada.trim()) return PAIS_DEFAULT;
+  const key = normalizarPais(entrada);
+  return PAISES[key] ?? PAISES[ALIAS_PAIS[key]] ?? null;
+}
+
+/** Lista legible de países soportados para mensajes de error y schema. */
+const PAISES_SOPORTADOS = Object.values(PAISES)
+  .map((p) => p.nombre)
+  .sort((a, b) => a.localeCompare(b, 'es'))
+  .join(', ');
 
 /** Forma relevante de la respuesta del endpoint /shopping de Serper. */
 interface SerperShoppingItem {
@@ -68,11 +325,14 @@ interface TavilyResult {
 }
 
 /**
- * Parsea precios en formato argentino ("$ 12.345,67") o anglosajón
+ * Parsea precios en formato latino ("$ 12.345,67") o anglosajón
  * ("ARS 12,345.67") a número. Devuelve null si no hay dígitos.
  */
 export function parsearPrecio(texto: string): number | null {
-  const limpio = texto.replace(/[^\d.,]/g, '');
+  // Los separadores colgantes son puntuación de la oración, no del número
+  // ("$ 993.0. El cemento..." captura "993.0."), y confunden la heurística
+  // de miles/decimales.
+  const limpio = texto.replace(/[^\d.,]/g, '').replace(/^[.,]+|[.,]+$/g, '');
   if (!/\d/.test(limpio)) return null;
   const ultimaComa = limpio.lastIndexOf(',');
   const ultimoPunto = limpio.lastIndexOf('.');
@@ -104,20 +364,40 @@ export function parsearPrecio(texto: string): number | null {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Regex de precio para las anclas de moneda de un país: prefijo pegado al
+ * número ("$ 10.049", "R$ 45,90") o código/palabra pospuesto ("12.652 ARS",
+ * "32.50 soles"). El lookbehind evita falsos positivos dentro de otras
+ * palabras o símbolos compuestos (la "$" de "U$S" no es un precio en pesos).
+ */
+function patronPrecio(pais: PaisBusqueda): RegExp {
+  const pre = pais.prefijos.map(escapeRegex).join('|');
+  const suf = pais.sufijos.map(escapeRegex).join('|');
+  return new RegExp(
+    `(?:(?<![\\w$])(?:${pre})\\s?([\\d][\\d.,]*)|([\\d][\\d.,]*)\\s?(?:${suf})(?!\\w))`,
+    'gi'
+  );
+}
+
 /**
  * Extrae el primer precio plausible de un texto libre ("$10.049,00 c/u",
- * "12.652,85 ARS"). Requiere el ancla $ o ARS para no confundir cantidades
- * ("50 kg") con precios, y descarta montos menores a $100 (ruido). Devuelve
- * también el fragmento alrededor para que el modelo pueda juzgar el contexto.
+ * "R$ 45,90 à vista") según las anclas de moneda del país. Requiere el ancla
+ * para no confundir cantidades ("50 kg") con precios, y descarta montos
+ * menores al mínimo plausible del país (ruido). Devuelve también el fragmento
+ * alrededor para que el modelo pueda juzgar el contexto.
  */
 export function extraerPrecio(
-  texto: string
+  texto: string,
+  pais: PaisBusqueda = PAIS_DEFAULT
 ): { precio: number; contexto: string } | null {
-  const patron = /(?:\$\s?([\d][\d.,]*)|([\d][\d.,]*)\s?ARS)/gi;
-  for (const m of texto.matchAll(patron)) {
+  for (const m of texto.matchAll(patronPrecio(pais))) {
     const crudo = m[1] ?? m[2];
     const precio = parsearPrecio(crudo);
-    if (precio === null || precio < 100) continue;
+    if (precio === null || precio < pais.precio_minimo) continue;
     const desde = Math.max(0, (m.index ?? 0) - 45);
     const hasta = Math.min(texto.length, (m.index ?? 0) + m[0].length + 45);
     return { precio, contexto: texto.slice(desde, hasta).trim() };
@@ -128,13 +408,15 @@ export function extraerPrecio(
 const MENSAJE_PRESENTACION =
   'Estos son precios minoristas online (retail), NO de corralón ni mayorista ' +
   'de obra: presentalos siempre como referencia de orden de magnitud, citando ' +
-  'comercio y fecha de consulta de cada uno. Si los usás en un cómputo, ' +
-  'aclaralo y no los mezcles en silencio con el dataset regional ni con la ' +
-  'lista propia del usuario.';
+  'comercio, moneda y fecha de consulta de cada uno. Si los usás en un ' +
+  'cómputo, aclaralo y no los mezcles en silencio con el dataset regional ni ' +
+  'con la lista propia del usuario (y nunca mezcles monedas distintas).';
 
-function errorFallo(termino: string): BuscarPrecioWebOutput {
+function errorFallo(input: BuscarPrecioWebInput): BuscarPrecioWebOutput {
   return {
-    termino,
+    termino: input.termino,
+    pais: input.pais,
+    lugar: input.lugar,
     total_encontrados: 0,
     resultados: [],
     error: 'busqueda_web_fallo',
@@ -146,17 +428,23 @@ function errorFallo(termino: string): BuscarPrecioWebOutput {
 }
 
 async function buscarSerper(
-  termino: string,
+  input: BuscarPrecioWebInput,
+  pais: PaisBusqueda,
   limit: number,
   apiKey: string
 ): Promise<PrecioWebEncontrado[]> {
+  const q = input.lugar ? `${input.termino} ${input.lugar}` : input.termino;
   const res = await fetch('https://google.serper.dev/shopping', {
     method: 'POST',
     headers: {
       'X-API-KEY': apiKey,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ q: termino, gl: 'ar', hl: 'es' }),
+    body: JSON.stringify({
+      q,
+      gl: pais.gl,
+      hl: pais.idioma === 'pt' ? 'pt-br' : 'es',
+    }),
   });
   if (!res.ok) throw new Error(`Serper respondió ${res.status}`);
   const data = await res.json();
@@ -171,7 +459,7 @@ async function buscarSerper(
     resultados.push({
       descripcion: item.title,
       precio,
-      moneda: 'ARS',
+      moneda: pais.moneda,
       comercio: item.source ?? 'Comercio online',
       url: item.link ?? '',
       fuente: 'web_retail',
@@ -190,10 +478,15 @@ function hostname(url: string): string {
 }
 
 async function buscarTavily(
-  termino: string,
+  input: BuscarPrecioWebInput,
+  pais: PaisBusqueda,
   limit: number,
   apiKey: string
 ): Promise<PrecioWebEncontrado[]> {
+  const precio = pais.idioma === 'pt' ? 'preço' : 'precio';
+  const query = [precio, input.termino, 'comprar', input.lugar, pais.nombre]
+    .filter(Boolean)
+    .join(' ');
   const res = await fetch('https://api.tavily.com/search', {
     method: 'POST',
     headers: {
@@ -201,9 +494,9 @@ async function buscarTavily(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      query: `precio ${termino} comprar argentina`,
+      query,
       max_results: Math.min(limit * 2, 10),
-      country: 'argentina',
+      country: pais.tavily,
     }),
   });
   if (!res.ok) throw new Error(`Tavily respondió ${res.status}`);
@@ -213,12 +506,12 @@ async function buscarTavily(
   const resultados: PrecioWebEncontrado[] = [];
   for (const item of items) {
     if (!item.title || !item.url) continue;
-    const extraido = extraerPrecio(`${item.title} ${item.content ?? ''}`);
+    const extraido = extraerPrecio(`${item.title} ${item.content ?? ''}`, pais);
     if (!extraido) continue;
     resultados.push({
       descripcion: item.title,
       precio: extraido.precio,
-      moneda: 'ARS',
+      moneda: pais.moneda,
       comercio: hostname(item.url),
       url: item.url,
       fuente: 'web_retail',
@@ -235,6 +528,8 @@ async function ejecutar(input: BuscarPrecioWebInput): Promise<BuscarPrecioWebOut
   if (!serperKey && !tavilyKey) {
     return {
       termino: input.termino,
+      pais: input.pais,
+      lugar: input.lugar,
       total_encontrados: 0,
       resultados: [],
       error: 'busqueda_web_no_configurada',
@@ -246,19 +541,37 @@ async function ejecutar(input: BuscarPrecioWebInput): Promise<BuscarPrecioWebOut
     };
   }
 
+  const pais = resolverPais(input.pais);
+  if (!pais) {
+    return {
+      termino: input.termino,
+      pais: input.pais,
+      lugar: input.lugar,
+      total_encontrados: 0,
+      resultados: [],
+      error: 'pais_no_soportado',
+      mensaje:
+        `No hay búsqueda de precios configurada para "${input.pais}". ` +
+        `Países soportados: ${PAISES_SOPORTADOS}. Decíselo al usuario sin ` +
+        'inventar precios.',
+    };
+  }
+
   const limit = Math.min(input.limit ?? 5, 10);
   const proveedor = serperKey ? 'serper' : 'tavily';
   let resultados: PrecioWebEncontrado[];
   try {
     resultados = serperKey
-      ? await buscarSerper(input.termino, limit, serperKey)
-      : await buscarTavily(input.termino, limit, tavilyKey!);
+      ? await buscarSerper(input, pais, limit, serperKey)
+      : await buscarTavily(input, pais, limit, tavilyKey!);
   } catch {
-    return errorFallo(input.termino);
+    return errorFallo(input);
   }
 
   return {
     termino: input.termino,
+    pais: pais.nombre,
+    lugar: input.lugar,
     total_encontrados: resultados.length,
     resultados,
     fecha_consulta: new Date().toISOString().slice(0, 10),
@@ -270,15 +583,29 @@ async function ejecutar(input: BuscarPrecioWebInput): Promise<BuscarPrecioWebOut
 const schema: Anthropic.Tool = {
   name: 'buscar_precio_web',
   description:
-    'Busca precios minoristas online (Argentina) de un material vía una API de búsqueda. Usar SOLO cuando el material no está en el dataset regional ni en la lista propia del usuario, y el usuario aceptó una referencia online. Devuelve precios estructurados con comercio, URL y fecha; la fuente es siempre "web_retail" (retail, no corralón) y debe citarse al presentar cada precio.',
+    'Busca precios minoristas online de un material en países de Latinoamérica vía una API de búsqueda. Usar SOLO cuando el material no está en el dataset regional ni en la lista propia del usuario, y el usuario aceptó una referencia online. Devuelve precios estructurados con comercio, URL, fecha y moneda local del país; la fuente es siempre "web_retail" (retail, no corralón) y debe citarse al presentar cada precio.',
   input_schema: {
     type: 'object',
     properties: {
       termino: {
         type: 'string',
         description:
-          'Material a buscar, lo más específico posible. Ej: "cemento portland 50kg", "hierro aletado 8mm barra 12m".',
+          'Material a buscar, lo más específico posible. Ej: "cemento portland 25kg", "hierro aletado 8mm barra 12m".',
         minLength: 3,
+      },
+      pais: {
+        type: 'string',
+        description:
+          'País donde buscar. Default: Argentina. Soportados: ' +
+          `${PAISES_SOPORTADOS}. Si el usuario nombra una ciudad o provincia ` +
+          'de otro país, resolvé vos a qué país pertenece y pasalo acá.',
+        default: 'Argentina',
+      },
+      lugar: {
+        type: 'string',
+        description:
+          'Provincia, departamento, estado o ciudad para enfocar la búsqueda ' +
+          'dentro del país. Ej: "Montevideo", "Asunción", "São Paulo". Opcional.',
       },
       limit: {
         type: 'number',
