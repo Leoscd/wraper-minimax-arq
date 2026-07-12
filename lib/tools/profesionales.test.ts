@@ -150,4 +150,96 @@ describe('buscar_profesionales', () => {
     expect(r.error).toBe('busqueda_web_fallo');
     expect(r.resultados).toEqual([]);
   });
+
+  it('oficio matriculado suma la pasada de padrón con include_domains', async () => {
+    vi.stubEnv('TAVILY_API_KEY', 'tvly-test');
+    fetchMock
+      // 1ª llamada: búsqueda web común
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          results: [
+            {
+              title: 'Gasista matriculado en Salta',
+              url: 'https://gasistasalta.com.ar',
+              content: 'Instalaciones de gas domiciliarias.',
+            },
+          ],
+        }),
+      })
+      // 2ª llamada: padrón institucional
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          results: [
+            {
+              title: 'Registro de gasistas matriculados — ENARGAS',
+              url: 'https://enargas.gob.ar/registro/gasistas',
+              content: 'Listado oficial de instaladores matriculados por distribuidora.',
+            },
+          ],
+        }),
+      });
+
+    const r = await buscarProfesionales({
+      oficio: 'gasista matriculado',
+      lugar: 'Salta',
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const bodyPadron = JSON.parse(fetchMock.mock.calls[1][1].body);
+    expect(bodyPadron.include_domains).toEqual(['enargas.gob.ar']);
+    expect(bodyPadron.query).toContain('matriculados');
+
+    expect(r.resultados_padron).toHaveLength(1);
+    expect(r.resultados_padron![0]).toMatchObject({
+      nombre: 'Registro de gasistas matriculados — ENARGAS',
+      fuente: 'padron_institucional',
+    });
+    expect(r.padron_fuentes![0]).toContain('ENARGAS');
+    expect(r.total_encontrados).toBe(2);
+    expect(r.mensaje).toContain('padron');
+  });
+
+  it('oficio sin fuentes institucionales no hace la pasada extra', async () => {
+    vi.stubEnv('TAVILY_API_KEY', 'tvly-test');
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ results: [] }),
+    });
+
+    const r = await buscarProfesionales({ oficio: 'plomero', lugar: 'Salta' });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(r.resultados_padron).toBeUndefined();
+  });
+
+  it('oficio matriculado en país sin fuentes curadas no hace la pasada extra', async () => {
+    vi.stubEnv('TAVILY_API_KEY', 'tvly-test');
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ results: [] }),
+    });
+
+    await buscarProfesionales({ oficio: 'gasista', pais: 'Uruguay' });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('si el padrón falla, la búsqueda principal sobrevive sin padrón', async () => {
+    vi.stubEnv('TAVILY_API_KEY', 'tvly-test');
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          results: [
+            { title: 'Electricista CABA', url: 'https://electricista.com.ar' },
+          ],
+        }),
+      })
+      .mockRejectedValueOnce(new Error('network'));
+
+    const r = await buscarProfesionales({ oficio: 'electricista', lugar: 'CABA' });
+    expect(r.error).toBeUndefined();
+    expect(r.resultados).toHaveLength(1);
+    expect(r.resultados_padron).toBeUndefined();
+  });
 });
