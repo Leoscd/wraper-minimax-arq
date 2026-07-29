@@ -19,7 +19,14 @@ export default async function PreviewPage({ params }: { params: { id: string } }
   // viewer simple (read-only) con boton de descarga PDF.
   const entregable = getEntregablePorId(params.id);
   if (entregable) {
-    return <PreviewEntregable html={entregable.html} filename={entregable.filename} id={params.id} />;
+    return (
+      <PreviewEntregable
+        html={entregable.html}
+        filename={entregable.filename}
+        id={params.id}
+        tipo={entregable.tipo}
+      />
+    );
   }
 
   // 2. Si es un proyecto guardado del editor, lo abrimos en el editor.

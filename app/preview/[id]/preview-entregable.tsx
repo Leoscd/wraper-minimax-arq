@@ -6,82 +6,141 @@ interface Props {
   html: string;
   filename: string;
   id: string;
+  tipo: 'presupuesto' | 'cronograma' | 'curva' | 'documento';
 }
+
+type Accion = 'pdf' | 'html' | 'xlsx';
+type Estado = 'idle' | 'descargando' | 'agotado' | 'error' | 'ok';
 
 /**
  * Viewer simple para entregables generados por el chat.
- * Muestra el HTML en un iframe y un boton "Descargar PDF" que:
- *   1. Hace POST a /api/entregable/[id]/pdf (incrementa counter)
- *   2. Si quedan PDFs, abre el dialog de print del browser (Ctrl+P)
- *   3. Si se gastaron los 3, muestra el CTA de upgrade
+ * Muestra el HTML en un iframe y 3 botones de descarga:
+ *   - PDF: counter de 3 en free tier. Print del browser via Ctrl+P.
+ *   - HTML: descarga directa del archivo .html.
+ *   - XLSX: export de los datos a Excel (placeholder, devuelve 501).
+ *
+ * Plan C1, C2, C3 (PLAN-LANZAMIENTO.md).
  */
-export function PreviewEntregable({ html, filename, id }: Props) {
-  const [estado, setEstado] = useState<'idle' | 'descargando' | 'agotado' | 'error'>(
-    'idle'
-  );
+export function PreviewEntregable({ html, filename, id, tipo }: Props) {
+  const [estado, setEstado] = useState<{ accion: Accion; v: Estado }>({
+    accion: 'pdf',
+    v: 'idle',
+  });
   const [mensaje, setMensaje] = useState<string | null>(null);
 
-  const descargar = async () => {
-    setEstado('descargando');
+  const handlePdf = async () => {
+    setEstado({ accion: 'pdf', v: 'descargando' });
     setMensaje(null);
     try {
       const res = await fetch(`/api/entregable/${id}/pdf`, { method: 'POST' });
       const data = await res.json();
       if (res.status === 429) {
-        setEstado('agotado');
+        setEstado({ accion: 'pdf', v: 'agotado' });
         setMensaje(data.message || 'Ya usaste los 3 PDFs del plan gratuito.');
         return;
       }
       if (!res.ok || !data.ok) {
-        setEstado('error');
+        setEstado({ accion: 'pdf', v: 'error' });
         setMensaje(data.error || 'Error al registrar la descarga.');
         return;
       }
-      // OK: el browser abre el dialog de print, que tiene los @media print
-      // del template y guarda como PDF.
       window.print();
       setMensaje(`PDFs usados: ${data.pdf.used} / ${data.pdf.limit}`);
-      setEstado('idle');
+      setEstado({ accion: 'pdf', v: 'idle' });
     } catch (err) {
-      setEstado('error');
+      setEstado({ accion: 'pdf', v: 'error' });
       setMensaje(err instanceof Error ? err.message : 'Error desconocido');
     }
   };
+
+  const handleHtml = () => {
+    // GET directo: el browser maneja la descarga.
+    window.location.href = `/api/entregable/${id}/html`;
+  };
+
+  const handleXlsx = async () => {
+    setEstado({ accion: 'xlsx', v: 'descargando' });
+    setMensaje(null);
+    try {
+      const res = await fetch(`/api/entregable/${id}/xlsx`, { method: 'POST' });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setEstado({ accion: 'xlsx', v: 'error' });
+        setMensaje(data.message || data.error || `Error ${res.status}`);
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename.replace(/\.html$/, '.xlsx');
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setEstado({ accion: 'xlsx', v: 'ok' });
+      setMensaje('Excel descargado.');
+    } catch (err) {
+      setEstado({ accion: 'xlsx', v: 'error' });
+      setMensaje(err instanceof Error ? err.message : 'Error desconocido');
+    }
+  };
+
+  // XLSX no tiene sentido para documentos cualitativos.
+  const xlsxDisponible = tipo !== 'documento';
 
   return (
     <div className="preview-entregable">
       <div className="preview-toolbar no-print">
         <div className="preview-info">
           <span className="preview-label">Entregable</span>
+          <span className="preview-tipo">{tipo}</span>
           <span className="preview-filename">{filename}</span>
         </div>
-        <button
-          type="button"
-          className="preview-descargar"
-          onClick={descargar}
-          disabled={estado === 'descargando' || estado === 'agotado'}
-        >
-          {estado === 'descargando'
-            ? 'Generando…'
-            : estado === 'agotado'
-              ? 'PDFs agotados'
-              : '↓ Descargar PDF'}
-        </button>
+        <div className="preview-actions">
+          <button
+            type="button"
+            className="preview-btn"
+            onClick={handlePdf}
+            disabled={estado.accion === 'pdf' && estado.v === 'descargando'}
+          >
+            {estado.accion === 'pdf' && estado.v === 'descargando'
+              ? 'PDF…'
+              : '↓ PDF'}
+          </button>
+          <button
+            type="button"
+            className="preview-btn"
+            onClick={handleHtml}
+          >
+            ↓ HTML
+          </button>
+          {xlsxDisponible && (
+            <button
+              type="button"
+              className="preview-btn"
+              onClick={handleXlsx}
+              disabled={estado.accion === 'xlsx' && estado.v === 'descargando'}
+            >
+              {estado.accion === 'xlsx' && estado.v === 'descargando'
+                ? 'XLSX…'
+                : '↓ Excel'}
+            </button>
+          )}
+        </div>
       </div>
 
       {mensaje && (
         <div
-          className={`preview-mensaje no-print ${estado === 'error' || estado === 'agotado' ? 'preview-mensaje-error' : 'preview-mensaje-info'}`}
+          className={`preview-mensaje no-print ${
+            estado.v === 'error' || estado.v === 'agotado' ? 'preview-mensaje-error' : 'preview-mensaje-info'
+          }`}
         >
           {mensaje}
         </div>
       )}
 
-      <iframe
-        srcDoc={html}
-        title={filename}
-        className="preview-iframe"
-      />
+      <iframe srcDoc={html} title={filename} className="preview-iframe" />
 
       <style jsx>{`
         .preview-entregable {
@@ -110,16 +169,29 @@ export function PreviewEntregable({ html, filename, id }: Props) {
           color: var(--gold);
           font-weight: 600;
         }
+        .preview-tipo {
+          font-size: 10px;
+          letter-spacing: 1.5px;
+          text-transform: uppercase;
+          color: var(--text-muted);
+          background: rgba(201, 168, 76, 0.18);
+          padding: 2px 8px;
+          border-radius: 3px;
+        }
         .preview-filename {
           font-size: 13px;
           color: var(--light);
           font-family: var(--mono);
         }
-        .preview-descargar {
+        .preview-actions {
+          display: flex;
+          gap: 8px;
+        }
+        .preview-btn {
           background: var(--gold);
           color: var(--dark);
           border: none;
-          padding: 10px 18px;
+          padding: 9px 14px;
           font-size: 11px;
           letter-spacing: 1.5px;
           text-transform: uppercase;
@@ -128,7 +200,7 @@ export function PreviewEntregable({ html, filename, id }: Props) {
           cursor: pointer;
           border-radius: 3px;
         }
-        .preview-descargar:disabled {
+        .preview-btn:disabled {
           opacity: 0.45;
           cursor: not-allowed;
         }
