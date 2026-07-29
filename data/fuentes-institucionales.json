@@ -1,0 +1,17 @@
+{
+  "descripcion": "Padrones y registros institucionales (colegios, consejos, reguladores) por país y oficio, para sesgar la búsqueda de profesionales hacia fuentes oficiales (include_domains de Tavily). Curar a mano: agregar dominios reales de padrones de matriculados por provincia. Un dominio que no rinde no rompe nada: la pasada institucional simplemente devuelve vacío. Los oficios se matchean por substring sobre el oficio pedido, sin acentos.",
+  "fuentes": [
+    {
+      "pais": "ARGENTINA",
+      "oficios": ["gasista", "instalador de gas"],
+      "dominios": ["enargas.gob.ar"],
+      "nota": "ENARGAS — registro de instaladores/gasistas matriculados por distribuidora"
+    },
+    {
+      "pais": "ARGENTINA",
+      "oficios": ["electricista", "instalador electrico"],
+      "dominios": ["apse.org.ar", "ersep.cba.gov.ar"],
+      "nota": "APSE (seguridad eléctrica) y ERSeP Córdoba — instaladores electricistas habilitados"
+    }
+  ]
+}

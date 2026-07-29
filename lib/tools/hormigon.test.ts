@@ -17,7 +17,7 @@ describe('calcularHormigon', () => {
     expect(result.volumen_real_m3).toBe(1.05);
 
     expect(result.materiales.cemento_kg).toBeCloseTo(336, 0);
-    expect(result.materiales.cemento_bolsas_50kg).toBe(7);
+    expect(result.materiales.cemento_bolsas_25kg).toBe(14);
     expect(result.materiales.arena_gruesa_m3).toBeCloseTo(0.5616, 4);
     expect(result.materiales.ripio_m3).toBeCloseTo(0.7776, 4);
     expect(result.materiales.agua_litros).toBe(190);
@@ -115,7 +115,7 @@ describe('calcularHormigon', () => {
     });
 
     expect(result.clase).toBe('H-21');
-    expect(result.materiales.cemento_bolsas_50kg).toBeGreaterThan(40);
-    expect(result.materiales.cemento_bolsas_50kg).toBeLessThan(60);
+    expect(result.materiales.cemento_bolsas_25kg).toBeGreaterThan(80);
+    expect(result.materiales.cemento_bolsas_25kg).toBeLessThan(120);
   });
 });

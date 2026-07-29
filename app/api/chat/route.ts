@@ -27,6 +27,7 @@ import type Anthropic from '@anthropic-ai/sdk';
 import { createMessage, streamMessage, MODELS } from '@/lib/minimax';
 import { allTools } from '@/lib/tools/registry';
 import { ejecutarTool } from '@/lib/tools/ejecutar';
+import type { ToolContext } from '@/lib/tools/types';
 import { chatSystemBlocks } from '@/lib/chat/system';
 import { ChatRequestSchema, formatZodError } from '@/lib/schemas';
 import {
@@ -39,7 +40,7 @@ export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 const MAX_ITERACIONES = 6;
-const MAX_TOKENS = 4000;
+const MAX_TOKENS = 8000;
 
 /**
  * Type guard: el output de `generar_entregable` (o futuras tools que devuelvan
@@ -111,13 +112,21 @@ export async function POST(req: NextRequest) {
 
     const system = chatSystemBlocks();
 
+    // Precios propios de la sesión del usuario: viajan del body a las tools
+    // por request (nunca al prompt ni a estado global del server).
+    const ctx: ToolContext = {
+      ...(parsed.data.precios_propios?.length
+        ? { preciosPropios: parsed.data.precios_propios }
+        : {}),
+    };
+
     // ¿El cliente pide streaming? (la UI usa ?stream=1; los tests usan la rama
     // JSON de abajo). Leemos de req.url para no depender de req.nextUrl.
     const wantsStream =
       new URL(req.url).searchParams.get('stream') === '1';
 
     if (wantsStream) {
-      return streamChat({ messages, system, rl });
+      return streamChat({ messages, system, rl, ctx });
     }
 
     let reply = '';
@@ -166,7 +175,16 @@ export async function POST(req: NextRequest) {
       for (const block of toolUseBlocks) {
         toolsInvocadas.push(block.name);
         try {
-          const result = ejecutarTool(block.name, block.input);
+          const result = await ejecutarTool(block.name, block.input, ctx);
+          if ((result as any)?.error) {
+            console.warn(
+              `[chat] tool ${block.name} devolvió error:`,
+              (result as any).error,
+              (result as any).mensaje ?? '',
+              '\n  input:',
+              JSON.stringify(block.input).slice(0, 600)
+            );
+          }
           if (esEntregable(result)) {
             entregables.push({
               id: result.id,
@@ -240,10 +258,12 @@ function streamChat({
   messages,
   system,
   rl,
+  ctx,
 }: {
   messages: Anthropic.MessageParam[];
   system: Anthropic.TextBlockParam[];
   rl: Awaited<ReturnType<typeof checkRateLimit>>;
+  ctx: ToolContext;
 }): Response {
   const encoder = new TextEncoder();
 
@@ -284,7 +304,16 @@ function streamChat({
             toolsInvocadas.push(block.name);
             send({ type: 'tool', name: block.name });
             try {
-              const result = ejecutarTool(block.name, block.input);
+              const result = await ejecutarTool(block.name, block.input, ctx);
+              if ((result as any)?.error) {
+                console.warn(
+                  `[chat] tool ${block.name} devolvió error:`,
+                  (result as any).error,
+                  (result as any).mensaje ?? '',
+                  '\n  input:',
+                  JSON.stringify(block.input).slice(0, 600)
+                );
+              }
               if (esEntregable(result)) {
                 send({
                   type: 'entregable',

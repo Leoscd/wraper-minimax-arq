@@ -209,7 +209,7 @@ export async function POST(req: NextRequest) {
       for (const block of toolUseBlocks) {
         toolsInvocadas.push(block.name);
         try {
-          const result = ejecutarTool(block.name, block.input);
+          const result = await ejecutarTool(block.name, block.input);
           toolResults.push({
             type: 'tool_result',
             tool_use_id: block.id,

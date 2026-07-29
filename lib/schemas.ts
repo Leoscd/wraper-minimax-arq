@@ -16,6 +16,9 @@
  */
 
 import { z } from 'zod';
+import { MAX_PRECIOS_PROPIOS } from './data/parse-lista';
+
+export { MAX_PRECIOS_PROPIOS };
 
 const hexColor = z
   .string()
@@ -150,12 +153,28 @@ export const ChatMessageSchema = z.object({
 });
 
 /**
+ * Item de la lista de precios propia del usuario. Mismo shape que
+ * `PrecioPropio` de lib/data/parse-lista.ts; el server valida acá porque
+ * nunca confía en lo que parseó el cliente.
+ */
+export const PrecioPropioSchema = z.object({
+  descripcion: z.string().min(1).max(300),
+  precio: z.number().finite().nonnegative(),
+  categoria: z.string().max(120).optional(),
+  codigo: z.string().max(60).optional(),
+  proveedor: z.string().max(120).optional(),
+});
+
+/**
  * Body de /api/chat: el historial completo de la conversación. El cliente
  * manda todos los turnos previos (stateless en el server); limitamos la
- * cantidad para acotar el costo de tokens por request.
+ * cantidad para acotar el costo de tokens por request. `precios_propios`
+ * es la lista de la sesión del usuario: viaja en cada request (no se
+ * persiste) y solo la ven las tools, nunca el prompt.
  */
 export const ChatRequestSchema = z.object({
   messages: z.array(ChatMessageSchema).min(1).max(40),
+  precios_propios: z.array(PrecioPropioSchema).max(MAX_PRECIOS_PROPIOS).optional(),
 });
 
 export const LeadInputSchema = z.object({

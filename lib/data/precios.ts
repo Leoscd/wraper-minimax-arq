@@ -63,21 +63,87 @@ function normalizarRegion(region: string): string {
 }
 
 /**
- * Devuelve el dataset de precios para la región pedida.
- * Si la región no existe, hace fallback al dataset por defecto (NOA) y avisa
- * con un console.warn en vez de tirar error: preferimos degradar a un
- * resultado útil antes que romper la generación.
+ * Provincias argentinas → región de precios (clasificación INDEC, con La Rioja
+ * en NOA y Buenos Aires/CABA en CENTRO). Claves ya normalizadas.
  */
-export function getPreciosDataset(region: string = REGION_DEFAULT): PreciosDataset {
-  const key = normalizarRegion(region);
-  const dataset = DATASETS[key];
+const PROVINCIA_A_REGION: Record<string, string> = {
+  JUJUY: 'NOA',
+  SALTA: 'NOA',
+  TUCUMAN: 'NOA',
+  CATAMARCA: 'NOA',
+  'SANTIAGO DEL ESTERO': 'NOA',
+  'LA RIOJA': 'NOA',
+  FORMOSA: 'NEA',
+  CHACO: 'NEA',
+  CORRIENTES: 'NEA',
+  MISIONES: 'NEA',
+  MENDOZA: 'CUYO',
+  'SAN JUAN': 'CUYO',
+  'SAN LUIS': 'CUYO',
+  CORDOBA: 'CENTRO',
+  'SANTA FE': 'CENTRO',
+  'ENTRE RIOS': 'CENTRO',
+  'LA PAMPA': 'CENTRO',
+  'BUENOS AIRES': 'CENTRO',
+  CABA: 'CENTRO',
+  'CIUDAD DE BUENOS AIRES': 'CENTRO',
+  'CIUDAD AUTONOMA DE BUENOS AIRES': 'CENTRO',
+  NEUQUEN: 'PATAGONIA',
+  'RIO NEGRO': 'PATAGONIA',
+  CHUBUT: 'PATAGONIA',
+  'SANTA CRUZ': 'PATAGONIA',
+  'TIERRA DEL FUEGO': 'PATAGONIA',
+};
 
-  if (!dataset) {
-    console.warn(
-      `[precios] Región "${region}" no disponible. Usando fallback "${REGION_DEFAULT}".`
-    );
-    return DATASETS[REGION_DEFAULT];
-  }
+/** Nombres alternativos con los que la gente pide una región. */
+const ALIAS_REGION: Record<string, string> = {
+  NOROESTE: 'NOA',
+  'NOROESTE ARGENTINO': 'NOA',
+  NORESTE: 'NEA',
+  'NORESTE ARGENTINO': 'NEA',
+  LITORAL: 'NEA',
+  PAMPEANA: 'CENTRO',
+  'REGION PAMPEANA': 'CENTRO',
+  AMBA: 'CENTRO',
+  PATAGONICA: 'PATAGONIA',
+  'PATAGONIA ARGENTINA': 'PATAGONIA',
+};
 
-  return dataset;
+/** Resultado de resolver la entrada del usuario a una región canónica. */
+export interface RegionResuelta {
+  /** Región canónica normalizada (ej. "PATAGONIA"). */
+  region: string;
+  /** Presente si la entrada era una provincia y no una región. */
+  provincia?: string;
+}
+
+/**
+ * Resuelve lo que pidió el usuario (región, alias o provincia) a la región
+ * canónica. "Neuquén" → PATAGONIA (provincia), "Patagónica" → PATAGONIA
+ * (alias). Si no se reconoce, devuelve la entrada normalizada tal cual.
+ */
+export function resolverRegion(entrada: string): RegionResuelta {
+  const key = normalizarRegion(entrada);
+  const alias = ALIAS_REGION[key];
+  if (alias) return { region: alias };
+  const region = PROVINCIA_A_REGION[key];
+  if (region) return { region, provincia: entrada.trim() };
+  return { region: key };
+}
+
+/** Regiones con dataset cargado (claves normalizadas del record DATASETS). */
+export function regionesDisponibles(): string[] {
+  return Object.keys(DATASETS);
+}
+
+/**
+ * Devuelve el dataset de precios para la región pedida, o `null` si no hay
+ * dataset para esa región. Sin fallback silencioso: presentar precios de una
+ * región como si fueran de otra rompe el invariante de trazabilidad de los
+ * números; el que llama decide qué hacer (la tool devuelve un error
+ * estructurado para que el modelo se lo explique al usuario).
+ */
+export function getPreciosDataset(region: string = REGION_DEFAULT): PreciosDataset | null {
+  const key = resolverRegion(region).region;
+  return DATASETS[key] ?? null;
 }

@@ -51,6 +51,42 @@ describe('crearErrorCliente', () => {
   });
 });
 
+describe('enviarChatStream - precios propios en el body', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn());
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('incluye precios_propios cuando hay lista cargada', async () => {
+    (fetch as any).mockResolvedValue(streamResponse(200, [{ type: 'done', tools_invocadas: [] }]));
+    const propios = [{ descripcion: 'Cemento x 50kg', precio: 14000 }];
+
+    await enviarChatStream({
+      messages: [{ role: 'user', content: 'hola' }],
+      preciosPropios: propios,
+      onEvent: () => {},
+    });
+
+    const body = JSON.parse((fetch as any).mock.calls[0][1].body);
+    expect(body.precios_propios).toEqual(propios);
+  });
+
+  it('omite precios_propios cuando no hay lista (o está vacía)', async () => {
+    (fetch as any).mockResolvedValue(streamResponse(200, [{ type: 'done', tools_invocadas: [] }]));
+
+    await enviarChatStream({
+      messages: [{ role: 'user', content: 'hola' }],
+      preciosPropios: [],
+      onEvent: () => {},
+    });
+
+    const body = JSON.parse((fetch as any).mock.calls[0][1].body);
+    expect(body).not.toHaveProperty('precios_propios');
+  });
+});
+
 describe('enviarChatStream - errores HTTP', () => {
   beforeEach(() => {
     vi.stubGlobal('fetch', vi.fn());

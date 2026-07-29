@@ -3,8 +3,16 @@ import {
   generarEntregable,
   getEntregablePorId,
   type GenerarEntregableInput,
+  type GenerarEntregableOutput,
 } from './generar-entregable';
 import type { ProyectoInput, RubrosInput } from '../types';
+
+/** Invoca la tool y narrowea el union: acá esperamos un entregable válido. */
+function gen(input: GenerarEntregableInput): GenerarEntregableOutput {
+  const r = generarEntregable(input);
+  if ('error' in r) throw new Error(`input inválido: ${r.mensaje}`);
+  return r;
+}
 
 const baseProyecto: ProyectoInput = {
   nombre: 'Casa Test',
@@ -61,7 +69,7 @@ describe('generarEntregable - presupuesto', () => {
       cliente: 'Cliente Test',
     };
 
-    const r = generarEntregable(input);
+    const r = gen(input);
 
     expect(r.id).toMatch(/^ent_/);
     expect(r.tipo).toBe('presupuesto');
@@ -75,7 +83,7 @@ describe('generarEntregable - presupuesto', () => {
   });
 
   it('incluye notas técnicas si se pasan', () => {
-    const r = generarEntregable({
+    const r = gen({
       tipo: 'presupuesto',
       proyecto: baseProyecto,
       rubros: baseRubros,
@@ -89,7 +97,7 @@ describe('generarEntregable - presupuesto', () => {
   });
 
   it('guarda el entregable en el store y se recupera por id', () => {
-    const r = generarEntregable({
+    const r = gen({
       tipo: 'presupuesto',
       proyecto: baseProyecto,
       rubros: baseRubros,
@@ -105,8 +113,126 @@ describe('generarEntregable - presupuesto', () => {
     expect(getEntregablePorId('id-inexistente')).toBeNull();
   });
 
-  it('el message menciona el nombre del proyecto y la cantidad de rubros', () => {
+  it('rubros con estructura incorrecta devuelve error estructurado, no throw', () => {
+    // El caso real que falló en el chat: el modelo mandó un array plano
+    // en vez de { rubros: [...], totales: {...} }.
     const r = generarEntregable({
+      tipo: 'presupuesto',
+      proyecto: baseProyecto,
+      rubros: [{ nombre: 'Hormigón', total: 100 }],
+      numero_presupuesto: '2026-001',
+      fecha: 'Julio 2026',
+    } as unknown as GenerarEntregableInput);
+
+    expect('error' in r && r.error).toBe('entregable_input_invalido');
+    expect('mensaje' in r && r.mensaje).toContain('rubros.rubros');
+    expect('mensaje' in r && r.mensaje).toContain('totales');
+  });
+
+  it('proyecto sin campos obligatorios devuelve error que los nombra', () => {
+    const r = generarEntregable({
+      tipo: 'presupuesto',
+      proyecto: { nombre: 'Casa X' },
+      rubros: baseRubros,
+      numero_presupuesto: '2026-001',
+      fecha: 'Julio 2026',
+    } as unknown as GenerarEntregableInput);
+
+    expect('error' in r && r.error).toBe('entregable_input_invalido');
+    expect('mensaje' in r && r.mensaje).toContain('proyecto.arquitecto');
+    expect('mensaje' in r && r.mensaje).toContain('proyecto.ubicacion');
+  });
+
+  it('acepta el shape real de MiniMax: totales al nivel raíz y montos como strings', () => {
+    // Input textual capturado del log del chat (2026-07-10): el modelo puso
+    // "totales" fuera de "rubros" y los montos de totales como strings.
+    const r = gen({
+      fecha: '10/07/2026',
+      numero_presupuesto: 'PRES-2026-001',
+      proyecto: { arquitecto: 'Leo Díaz', nombre: 'Casa Pérez', ubicacion: 'Salta' },
+      rubros: {
+        rubros: [
+          {
+            cantidad: 10,
+            incidencia: '100%',
+            mano_de_obra: 500000,
+            materiales: 1500000,
+            nombre: 'Hormigón H-21',
+            numero: '01',
+            precio_unitario_mat: 150000,
+            precio_unitario_mo: 50000,
+            total: 2000000,
+            unidad: 'm³',
+          },
+        ],
+      },
+      tipo: 'presupuesto',
+      totales: {
+        mano_de_obra: '500000',
+        materiales: '1500000',
+        total_obra: '2000000',
+      },
+    } as unknown as GenerarEntregableInput);
+
+    expect(r.tipo).toBe('presupuesto');
+    expect(r.html).toContain('Casa Pérez');
+    expect(r.html).toContain('Hormigón H-21');
+    expect(r.message).toContain('total 2000000');
+  });
+
+  it('acepta rubros como array plano con totales al nivel raíz', () => {
+    const r = gen({
+      tipo: 'presupuesto',
+      proyecto: { nombre: 'Casa Z', arquitecto: 'Arq', ubicacion: 'Salta' },
+      rubros: [
+        {
+          numero: '01',
+          nombre: 'Mampostería',
+          cantidad: 50,
+          precio_unitario_mat: 10000,
+          precio_unitario_mo: 8000,
+          total: 900000,
+        },
+      ],
+      totales: { materiales: 500000, mano_de_obra: 400000, total_obra: 900000 },
+      numero_presupuesto: 'PRES-2026-003',
+      fecha: '10/07/2026',
+    } as unknown as GenerarEntregableInput);
+
+    expect(r.html).toContain('Mampostería');
+  });
+
+  it('tolera numero como number y campos secundarios ausentes', () => {
+    const r = gen({
+      tipo: 'presupuesto',
+      proyecto: {
+        nombre: 'Casa Y',
+        arquitecto: 'Arq. Test',
+        ubicacion: 'Salta',
+      },
+      rubros: {
+        rubros: [
+          {
+            numero: 1,
+            nombre: 'Hormigón H-21',
+            cantidad: 10,
+            precio_unitario_mat: 150000,
+            precio_unitario_mo: 50000,
+            total: 2000000,
+          },
+        ],
+        totales: { materiales: 1500000, mano_de_obra: 500000, total_obra: 2000000 },
+      },
+      numero_presupuesto: '2026-002',
+      fecha: 'Julio 2026',
+    } as unknown as GenerarEntregableInput);
+
+    expect(r.html).toContain('Hormigón H-21');
+    expect(r.html).toContain('Casa Y');
+  });
+
+  it('el message menciona el nombre del proyecto y la cantidad de rubros', () => {
+    const r = gen({
       tipo: 'presupuesto',
       proyecto: baseProyecto,
       rubros: baseRubros,
@@ -148,7 +274,7 @@ describe('generarEntregable - tipos pendientes (Pasos B y D)', () => {
   };
 
   it('cronograma genera HTML real con Gantt (Paso B done)', () => {
-    const r = generarEntregable({
+    const r = gen({
       tipo: 'cronograma',
       proyecto: { nombre: 'Casa X', ubicacion: 'Tucumán', año: '2026' },
       cronograma: cronogramaOutput,
@@ -164,7 +290,7 @@ describe('generarEntregable - tipos pendientes (Pasos B y D)', () => {
   });
 
   it('curva genera HTML real con curva S (Paso B done)', () => {
-    const r = generarEntregable({
+    const r = gen({
       tipo: 'curva',
       proyecto: { nombre: 'Casa X', ubicacion: 'Tucumán', año: '2026' },
       curva: curvaOutput,
@@ -179,7 +305,7 @@ describe('generarEntregable - tipos pendientes (Pasos B y D)', () => {
   });
 
   it('documento genera HTML real con markdown (Paso D done)', () => {
-    const r = generarEntregable({
+    const r = gen({
       tipo: 'documento',
       proyecto: { nombre: 'Casa X', ubicacion: 'Tucumán', año: '2026' },
       titulo: 'Memoria técnica',

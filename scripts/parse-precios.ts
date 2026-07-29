@@ -1,8 +1,9 @@
 /**
  * Script para convertir un CSV de precios → data/precios-<slug>.json
  *
- * Generalizado para soportar múltiples regiones y formatos de CSV:
- *   - Auto-detecta el separador (";" o ",").
+ * Generalizado para soportar múltiples regiones y formatos de CSV
+ * (helpers de parseo compartidos en lib/data/parse-lista.ts):
+ *   - Auto-detecta el separador (";", "," o tab).
  *   - Parser con soporte de comillas dobles (campos con comas/; embebidos).
  *   - Mapea columnas POR NOMBRE de header (no por posición), así tolera CSVs
  *     con distinto orden y cantidad de columnas. Columnas mínimas: categoria,
@@ -23,6 +24,13 @@
  */
 
 import { readFileSync, writeFileSync, existsSync } from 'fs';
+import {
+  parsePrice,
+  normalizeHeader,
+  detectSeparator,
+  parseCsvLine,
+  findCol,
+} from '../lib/data/parse-lista';
 
 interface PrecioRaw {
   proveedor: string;
@@ -53,63 +61,6 @@ const SOURCE_PATHS = [
   './presupuesto-constructor.zip',
 ];
 
-function parsePrice(raw: string): number {
-  // Formato argentino: "261.051,59" → quita puntos de miles, coma decimal → punto.
-  const cleaned = raw.trim().replace(/\./g, '').replace(',', '.');
-  const num = parseFloat(cleaned);
-  return isNaN(num) ? 0 : num;
-}
-
-/** Normaliza un nombre de columna (minúsculas, sin acentos) para matchear el header. */
-function normalizeHeader(h: string): string {
-  return h
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '');
-}
-
-/** Detecta el separador más probable (";" o ",") a partir de la línea de header. */
-function detectSeparator(headerLine: string): ';' | ',' {
-  const semi = (headerLine.match(/;/g) || []).length;
-  const comma = (headerLine.match(/,/g) || []).length;
-  return semi >= comma ? ';' : ',';
-}
-
-/**
- * Parser de una línea CSV con soporte de comillas dobles. Respeta separadores
- * embebidos dentro de comillas y maneja comillas escapadas ("").
- */
-function parseCsvLine(line: string, sep: string): string[] {
-  const out: string[] = [];
-  let cur = '';
-  let inQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (inQuotes) {
-      if (ch === '"') {
-        if (line[i + 1] === '"') {
-          cur += '"';
-          i++;
-        } else {
-          inQuotes = false;
-        }
-      } else {
-        cur += ch;
-      }
-    } else if (ch === '"') {
-      inQuotes = true;
-    } else if (ch === sep) {
-      out.push(cur);
-      cur = '';
-    } else {
-      cur += ch;
-    }
-  }
-  out.push(cur);
-  return out.map((s) => s.trim());
-}
-
 /** Convierte "NOA (Noroeste Argentino)" → "noa" para nombrar el archivo. */
 function slugify(region: string): string {
   return region
@@ -138,11 +89,6 @@ function parseArgs(argv: string[]): Record<string, string> {
     }
   }
   return args;
-}
-
-/** Busca el índice de una columna por nombre normalizado (acepta variantes). */
-function findCol(header: string[], ...nombres: string[]): number {
-  return header.findIndex((h) => nombres.includes(h));
 }
 
 function main() {

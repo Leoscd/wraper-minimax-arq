@@ -8,7 +8,9 @@
  * - Markdown renderizado (react-markdown + GFM): nada de **, __, listas crudas.
  * - Layout abierto, sin "caja de diálogo": el asistente responde como texto
  *   corrido; el usuario va en una burbuja sutil.
- * - Composer con botón de adjuntar archivo (por ahora solo UI) + textarea.
+ * - Precios propios: el usuario puede cargar su lista (CSV con el botón de
+ *   adjuntar, o pegándola en el textarea). Se parsea en el cliente
+ *   (lib/data/parse-lista) y viaja con cada request; vale solo esta sesión.
  *
  * Mantiene el historial en estado local y lo manda completo en cada turno (el
  * server es stateless). Los chips de tools muestran de qué herramienta salió el
@@ -22,6 +24,11 @@ import {
   enviarChatStream,
   type ChatClientError,
 } from '@/lib/chat/client';
+import {
+  parseListaPrecios,
+  MAX_PRECIOS_PROPIOS,
+  type PrecioPropio,
+} from '@/lib/data/parse-lista';
 
 interface Entregable {
   id: string;
@@ -38,13 +45,40 @@ interface Mensaje {
   entregables?: Entregable[];
 }
 
-const SUGERENCIAS = [
-  '¿Cuánto sale el m² de losa H-21 de 12cm en Tucumán?',
-  '¿Cuántas bolsas de 50kg de cemento lleva un m³ de hormigón H-21?',
-  'Dame el precio actual de la barra de hierro del 12',
-  '¿Cuánta mano de obra lleva levantar 50 m² de mampostería de ladrillo hueco?',
-  '¿Qué desperdicio conviene prever para cerámicos en diagonal?',
-  'Necesito un cronograma de 3 tareas: fundaciones 5 días, estructura 15 días, revoques 8 días. ¿Cuándo arrancan las revoques?',
+/** Lista de precios propia cargada en esta sesión del navegador. */
+interface ListaPropia {
+  items: PrecioPropio[];
+  /** De dónde salió: nombre del archivo o "texto pegado". */
+  origen: string;
+  truncado: boolean;
+}
+
+const CAPACIDADES = [
+  {
+    termino: 'Precios',
+    detalle:
+      'Materiales por región o provincia, de la lista NOA o de tu propia lista: adjuntá un CSV o pegala en el chat y cada precio cita su fuente.',
+  },
+  {
+    termino: 'Cómputos',
+    detalle:
+      'Hormigón, hierro, estribos, mampostería, morteros y el desperdicio que conviene prever en cada rubro.',
+  },
+  {
+    termino: 'Obra',
+    detalle:
+      'Horas de mano de obra por tarea, cronogramas con fechas de arranque y curvas de inversión.',
+  },
+  {
+    termino: 'Profesionales',
+    detalle:
+      'Empresas y oficios por zona — plomeros, electricistas, herreros, techistas — con contacto y reseñas, citando la fuente.',
+  },
+  {
+    termino: 'Entregables',
+    detalle:
+      'Presupuestos técnicos generados en la conversación, listos para abrir y compartir.',
+  },
 ];
 
 export default function Chat() {
@@ -54,7 +88,13 @@ export default function Chat() {
   const [error, setError] = useState<string | null>(null);
   const [errorTipo, setErrorTipo] = useState<ChatClientError['tipo'] | null>(null);
   const [resetAt, setResetAt] = useState<string | null>(null);
-  const [archivo, setArchivo] = useState<File | null>(null);
+  const [listaPropia, setListaPropia] = useState<ListaPropia | null>(null);
+  const [parseAviso, setParseAviso] = useState<string | null>(null);
+  const [pastePendiente, setPastePendiente] = useState<{
+    texto: string;
+    items: PrecioPropio[];
+    truncado: boolean;
+  } | null>(null);
   const [ultimoInput, setUltimoInput] = useState<string | null>(null);
   const finRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -97,7 +137,6 @@ export default function Chat() {
     setError(null);
     setErrorTipo(null);
     setResetAt(null);
-    setArchivo(null);
     setUltimoInput(consulta);
 
     const historial: Mensaje[] = [...mensajes, { role: 'user', content: consulta }];
@@ -114,6 +153,7 @@ export default function Chat() {
     try {
       await enviarChatStream({
         messages: historial.map((m) => ({ role: m.role, content: m.content })),
+        preciosPropios: listaPropia?.items,
         signal: controller.signal,
         onEvent: (evento) => {
           if (evento.type === 'text') {
@@ -181,6 +221,47 @@ export default function Chat() {
     abortRef.current?.abort();
   };
 
+  /** Parsea y carga una lista de precios propia. Devuelve true si sirvió. */
+  const cargarLista = (texto: string, origen: string): boolean => {
+    const r = parseListaPrecios(texto);
+    if (r.items.length === 0) {
+      setParseAviso(
+        r.errores[0] ??
+          'No se pudo leer la lista. Formato esperado: descripción y precio por línea.'
+      );
+      return false;
+    }
+    setListaPropia({ items: r.items, origen, truncado: r.truncado });
+    setParseAviso(null);
+    return true;
+  };
+
+  const onArchivoSeleccionado = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // permite volver a elegir el mismo archivo
+    if (!file) return;
+    cargarLista(await file.text(), file.name);
+  };
+
+  /**
+   * Si el usuario pega algo con pinta de lista de precios (varias líneas que
+   * parsean a items), interceptamos el paste y le ofrecemos cargarla como sus
+   * precios en vez de meterla como texto del mensaje (que además supera el
+   * límite de 8000 caracteres con listas largas).
+   */
+  const onPaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const texto = e.clipboardData.getData('text');
+    const lineas = texto.split(/\r?\n/).filter((l) => l.trim().length > 0);
+    if (lineas.length < 3) return;
+    const r = parseListaPrecios(texto);
+    if (r.items.length >= 3) {
+      e.preventDefault();
+      setPastePendiente({ texto, items: r.items, truncado: r.truncado });
+    }
+  };
+
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     enviar(input);
@@ -202,23 +283,19 @@ export default function Chat() {
       <div className="chat-mensajes">
         {mensajes.length === 0 && !cargando && (
           <div className="chat-vacio">
-            <p className="chat-vacio-titulo">¿En qué te doy una mano hoy?</p>
             <p className="chat-vacio-sub">
-              Precios, cómputos, mano de obra, cronogramas. Los números salen de
-              herramientas determinísticas, no inventados.
+              Los cálculos salen de herramientas determinísticas — nada se
+              inventa — y cada precio cita de qué lista salió. Esto es lo que
+              podés pedirle:
             </p>
-            <div className="chat-sugerencias">
-              {SUGERENCIAS.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  className="chat-chip"
-                  onClick={() => enviar(s)}
-                >
-                  {s}
-                </button>
+            <dl className="chat-capacidades">
+              {CAPACIDADES.map((c) => (
+                <div key={c.termino} className="chat-capacidad">
+                  <dt>{c.termino}</dt>
+                  <dd>{c.detalle}</dd>
+                </div>
               ))}
-            </div>
+            </dl>
           </div>
         )}
 
@@ -248,7 +325,7 @@ export default function Chat() {
                   <div className="chat-tools">
                     {m.tools.map((t) => (
                       <span key={t} className="chat-tool-badge">
-                        🔧 {t}
+                        {t}
                       </span>
                     ))}
                   </div>
@@ -264,7 +341,16 @@ export default function Chat() {
                         className="chat-entregable"
                       >
                         <span className="chat-entregable-icono">
-                          {e.tipo === 'presupuesto' ? '📋' : e.tipo === 'cronograma' ? '📅' : e.tipo === 'curva' ? '📈' : '📄'}
+                          <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+                            <path
+                              d="M4 1.5h7L15 5.5V15a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 3 15V3A1.5 1.5 0 0 1 4.5 1.5Z M11 1.5v4h4"
+                              stroke="currentColor"
+                              strokeWidth="1.3"
+                              strokeLinejoin="round"
+                              fill="none"
+                            />
+                            <path d="M6 9.5h6M6 12.5h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                          </svg>
                         </span>
                         <span className="chat-entregable-info">
                           <span className="chat-entregable-titulo">
@@ -318,16 +404,67 @@ export default function Chat() {
       </div>
 
       <form className="chat-form" onSubmit={onSubmit}>
-        {archivo && (
-          <div className="chat-adjunto">
-            <span className="chat-adjunto-nombre">📎 {archivo.name}</span>
+        {listaPropia && (
+          <div className="chat-adjunto" data-testid="lista-propia-banner">
+            <span className="chat-adjunto-nombre">
+              {listaPropia.items.length} precios propios cargados desde{' '}
+              {listaPropia.origen} — valen solo para esta sesión del navegador
+              {listaPropia.truncado &&
+                ` (se tomaron los primeros ${MAX_PRECIOS_PROPIOS})`}
+            </span>
             <button
               type="button"
               className="chat-adjunto-quitar"
-              onClick={() => setArchivo(null)}
-              aria-label="Quitar archivo"
+              onClick={() => setListaPropia(null)}
+              aria-label="Quitar lista de precios"
+            >
+              Quitar
+            </button>
+          </div>
+        )}
+        {parseAviso && (
+          <div className="chat-adjunto chat-adjunto-aviso" role="alert">
+            <span className="chat-adjunto-nombre">{parseAviso}</span>
+            <button
+              type="button"
+              className="chat-adjunto-quitar"
+              onClick={() => setParseAviso(null)}
+              aria-label="Cerrar aviso"
             >
               ✕
+            </button>
+          </div>
+        )}
+        {pastePendiente && (
+          <div className="chat-adjunto" data-testid="paste-prompt">
+            <span className="chat-adjunto-nombre">
+              Parece una lista de precios ({pastePendiente.items.length} items).
+              ¿Cómo la uso?
+            </span>
+            <button
+              type="button"
+              className="chat-adjunto-accion"
+              onClick={() => {
+                setListaPropia({
+                  items: pastePendiente.items,
+                  origen: 'texto pegado',
+                  truncado: pastePendiente.truncado,
+                });
+                setParseAviso(null);
+                setPastePendiente(null);
+              }}
+            >
+              Cargar como mis precios
+            </button>
+            <button
+              type="button"
+              className="chat-adjunto-accion"
+              onClick={() => {
+                setInput((prev) => prev + pastePendiente.texto);
+                setPastePendiente(null);
+              }}
+            >
+              Pegar como texto
             </button>
           </div>
         )}
@@ -336,17 +473,20 @@ export default function Chat() {
             type="button"
             className="chat-adjuntar"
             onClick={() => fileRef.current?.click()}
-            aria-label="Adjuntar archivo"
-            title="Adjuntar archivo"
+            aria-label="Cargar lista de precios (CSV)"
+            title="Cargar tu lista de precios (CSV o texto)"
             disabled={cargando}
           >
-            +
+            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M8 2.5v11M2.5 8h11" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
           </button>
           <input
             ref={fileRef}
             type="file"
             hidden
-            onChange={(e) => setArchivo(e.target.files?.[0] ?? null)}
+            accept=".csv,.txt,text/csv,text/plain,text/tab-separated-values"
+            onChange={onArchivoSeleccionado}
           />
           <textarea
             ref={textareaRef}
@@ -354,6 +494,7 @@ export default function Chat() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={onKeyDown}
+            onPaste={onPaste}
             placeholder="Preguntá sobre precios, cómputos, obra…"
             rows={1}
             disabled={cargando}
@@ -366,7 +507,9 @@ export default function Chat() {
               aria-label="Cancelar"
               title="Detener la respuesta"
             >
-              ⏹
+              <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+                <rect x="1" y="1" width="10" height="10" rx="2" fill="currentColor" />
+              </svg>
             </button>
           ) : (
             <button
@@ -375,7 +518,16 @@ export default function Chat() {
               disabled={!input.trim()}
               aria-label="Enviar"
             >
-              ↑
+              <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                <path
+                  d="M8 13V3m0 0L3.5 7.5M8 3l4.5 4.5"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  fill="none"
+                />
+              </svg>
             </button>
           )}
         </div>
@@ -403,41 +555,48 @@ export default function Chat() {
         }
         .chat-vacio {
           margin: auto;
-          text-align: center;
           max-width: 560px;
-        }
-        .chat-vacio-titulo {
-          font-family: var(--serif);
-          font-size: 30px;
-          color: var(--light);
-          margin-bottom: 10px;
+          padding: 0 12px;
         }
         .chat-vacio-sub {
           font-size: 14px;
           color: var(--text-muted);
-          margin-bottom: 28px;
-          line-height: 1.6;
+          margin-bottom: 24px;
+          line-height: 1.65;
+          max-width: 52ch;
         }
-        .chat-sugerencias {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 10px;
-          justify-content: center;
+        /* Capacidades: término dorado + detalle, separados por hairlines. */
+        .chat-capacidades {
+          margin: 0;
         }
-        .chat-chip {
-          background: transparent;
-          border: 1px solid var(--gold-mid);
+        .chat-capacidad {
+          display: grid;
+          grid-template-columns: 118px 1fr;
+          gap: 16px;
+          padding: 14px 0;
+          border-top: 1px solid rgba(201, 168, 76, 0.16);
+        }
+        .chat-capacidad:last-child {
+          border-bottom: 1px solid rgba(201, 168, 76, 0.16);
+        }
+        .chat-capacidad dt {
+          font-size: 11px;
+          letter-spacing: 2px;
+          text-transform: uppercase;
           color: var(--gold);
-          padding: 10px 14px;
-          font-size: 12.5px;
-          border-radius: 20px;
-          cursor: pointer;
-          transition: background 0.2s;
-          text-align: left;
-          font-family: var(--font-inter), 'Helvetica Neue', Helvetica, Arial, sans-serif;
+          padding-top: 3px;
         }
-        .chat-chip:hover {
-          background: rgba(201, 168, 76, 0.1);
+        .chat-capacidad dd {
+          margin: 0;
+          font-size: 13.5px;
+          line-height: 1.6;
+          color: var(--text);
+        }
+        @media (max-width: 520px) {
+          .chat-capacidad {
+            grid-template-columns: 1fr;
+            gap: 4px;
+          }
         }
         .chat-msg {
           display: flex;
@@ -504,8 +663,9 @@ export default function Chat() {
           transform: translateY(-1px);
         }
         .chat-entregable-icono {
-          font-size: 22px;
-          line-height: 1;
+          display: flex;
+          align-items: center;
+          color: var(--gold);
           flex-shrink: 0;
         }
         .chat-entregable-info {
@@ -654,6 +814,23 @@ export default function Chat() {
         .chat-adjunto-quitar:hover {
           color: var(--light);
         }
+        .chat-adjunto-aviso {
+          border-color: rgba(255, 80, 80, 0.4);
+          color: #ff9a9a;
+        }
+        .chat-adjunto-accion {
+          background: transparent;
+          border: 1px solid var(--gold-mid);
+          color: var(--gold);
+          padding: 4px 10px;
+          font-size: 12px;
+          border-radius: 6px;
+          cursor: pointer;
+          font-family: var(--font-inter), 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        }
+        .chat-adjunto-accion:hover {
+          background: rgba(201, 168, 76, 0.12);
+        }
         .chat-composer {
           display: flex;
           align-items: flex-end;
@@ -675,8 +852,6 @@ export default function Chat() {
           background: transparent;
           border: 1px solid var(--gold-mid);
           color: var(--gold);
-          font-size: 20px;
-          line-height: 1;
           cursor: pointer;
           display: flex;
           align-items: center;
@@ -690,11 +865,13 @@ export default function Chat() {
           flex: 1;
           background: transparent;
           border: none;
-          padding: 7px 4px;
+          /* 22px de línea + 6px arriba/abajo = 34px, la altura de los botones:
+             con una sola línea todo queda alineado, con varias crece hacia arriba. */
+          padding: 6px 4px;
           color: var(--light);
           font-size: 15px;
           font-family: var(--font-inter), 'Helvetica Neue', Helvetica, Arial, sans-serif;
-          line-height: 1.5;
+          line-height: 22px;
           outline: none;
           resize: none;
           max-height: 200px;
@@ -710,8 +887,6 @@ export default function Chat() {
           background: var(--gold);
           color: var(--dark);
           border: none;
-          font-size: 18px;
-          font-weight: 700;
           cursor: pointer;
           display: flex;
           align-items: center;

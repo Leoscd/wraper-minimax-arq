@@ -17,6 +17,10 @@ import hormigonData from '../../data/hormigon.json';
 
 const HORMIGON_DEFAULT = 'H-21';
 
+// La bolsa de 50 kg ya no se fabrica en Argentina: por disposición general el
+// cemento se comercializa solo en presentación de 25 kg.
+const BOLSA_CEMENTO_KG = 25;
+
 interface ClaseHormigon {
   clase: string;
   cemento_kg_m3: number;
@@ -64,7 +68,7 @@ function calcular(input: HormigonInput): HormigonOutput {
 
   const cementoKg =
     clase.cemento_kg_m3 * input.volumen_m3 * cementoFactor * factorDesperdicio;
-  const cementoBolsas = Math.ceil(cementoKg / 50);
+  const cementoBolsas = Math.ceil(cementoKg / BOLSA_CEMENTO_KG);
 
   const arenaM3 = clase.arena_gruesa_m3_m3 * input.volumen_m3 * 1.08;
   const ripioM3 = clase.ripio_m3_m3 * input.volumen_m3 * 1.08;
@@ -93,7 +97,7 @@ function calcular(input: HormigonInput): HormigonOutput {
     volumen_m3: input.volumen_m3,
     materiales: {
       cemento_kg: Math.round(cementoKg * 100) / 100,
-      cemento_bolsas_50kg: cementoBolsas,
+      cemento_bolsas_25kg: cementoBolsas,
       arena_gruesa_m3: arenaM3Round,
       ripio_m3: ripioM3Round,
       agua_litros: Math.round(aguaLitros * 10) / 10,
@@ -107,7 +111,7 @@ function calcular(input: HormigonInput): HormigonOutput {
 const schema: Anthropic.Tool = {
   name: 'calcular_hormigon',
   description:
-    'Calcula los materiales necesarios (cemento, arena gruesa, ripio 1:3, agua) para un volumen dado de hormigón armado. Considera la clase del hormigón (H-13, H-17, H-21, H-25, H-30), si es elaborado o in situ, si se usa bomba, y la humedad de los áridos. Por defecto usa H-21.',
+    'Calcula los materiales necesarios (cemento, arena gruesa, ripio 1:3, agua) para un volumen dado de hormigón armado. Considera la clase del hormigón (H-13, H-17, H-21, H-25, H-30), si es elaborado o in situ, si se usa bomba, y la humedad de los áridos. Por defecto usa H-21. El cemento se computa en bolsas de 25 kg (la presentación vigente en Argentina; la de 50 kg ya no se fabrica).',
   input_schema: {
     type: 'object',
     properties: {

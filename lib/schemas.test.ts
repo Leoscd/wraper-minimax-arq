@@ -6,6 +6,8 @@ import {
   RubrosInputSchema,
   GenerationRequestSchema,
   LeadInputSchema,
+  ChatRequestSchema,
+  MAX_PRECIOS_PROPIOS,
   formatZodError,
 } from './schemas';
 
@@ -221,6 +223,50 @@ describe('LeadInputSchema', () => {
   it('rechaza email inválido', () => {
     const r = LeadInputSchema.safeParse({ email: 'mal' });
     expect(r.success).toBe(false);
+  });
+});
+
+describe('ChatRequestSchema (precios_propios)', () => {
+  const messages = [{ role: 'user', content: 'Hola' }];
+
+  it('acepta request sin precios_propios (campo opcional)', () => {
+    expect(ChatRequestSchema.safeParse({ messages }).success).toBe(true);
+  });
+
+  it('acepta precios propios válidos con campos opcionales', () => {
+    const r = ChatRequestSchema.safeParse({
+      messages,
+      precios_propios: [
+        { descripcion: 'Cemento x 50kg', precio: 14000 },
+        { descripcion: 'Arena m3', precio: 22000.5, categoria: 'ARIDOS', proveedor: 'X' },
+      ],
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it('rechaza items sin descripción o con precio no numérico/negativo', () => {
+    expect(
+      ChatRequestSchema.safeParse({
+        messages,
+        precios_propios: [{ descripcion: '', precio: 100 }],
+      }).success
+    ).toBe(false);
+    expect(
+      ChatRequestSchema.safeParse({
+        messages,
+        precios_propios: [{ descripcion: 'Item', precio: -5 }],
+      }).success
+    ).toBe(false);
+  });
+
+  it('rechaza listas más largas que MAX_PRECIOS_PROPIOS', () => {
+    const demasiados = Array.from({ length: MAX_PRECIOS_PROPIOS + 1 }, (_, i) => ({
+      descripcion: `Item ${i}`,
+      precio: i + 1,
+    }));
+    expect(
+      ChatRequestSchema.safeParse({ messages, precios_propios: demasiados }).success
+    ).toBe(false);
   });
 });
 

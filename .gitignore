@@ -58,3 +58,5 @@ docs/PLAN-FASE3-ENTREGABLES.md
 # Playwright artifacts
 playwright-report/
 test-results/
+.env*
+!.env*.example
