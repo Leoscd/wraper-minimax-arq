@@ -133,3 +133,73 @@ export function usageResponseHeaders(s: UsageSnapshot): Record<string, string> {
     'X-Usage-Reset': s.resetAt,
   };
 }
+
+/**
+ * Contador de PDFs generados por usuario (limit 3 en free).
+ *
+ * PLAN-LANZAMIENTO.md §2: el usuario free puede ver el entregable y bajar
+ * 3 PDFs en TOTAL. Cuando se implemente C1 (PDF), este counter se consulta
+ * desde el endpoint de generacion para bloquear cuando se llega al limite.
+ *
+ * Se persiste en KV con la misma logica de reset mensual que los tokens.
+ */
+
+export const PDF_LIMIT_FREE = 3;
+
+export interface PdfCounterSnapshot {
+  userId: string;
+  used: number;
+  limit: number;
+  resetAt: string;
+  remaining: number;
+  /** true si el usuario free ya gasto los 3 PDFs del mes. */
+  agotado: boolean;
+}
+
+function pdfKey(userId: string): string {
+  return `pdfs:${userId}`;
+}
+
+export async function getPdfCounter(userId: string): Promise<PdfCounterSnapshot> {
+  const limit = PDF_LIMIT_FREE;
+  try {
+    const stored = await storage.get<{ used: number; resetAt: string }>(pdfKey(userId));
+    const used = stored?.used ?? 0;
+    const resetAt = stored?.resetAt ?? endOfMonth().toISOString();
+    return {
+      userId,
+      used,
+      limit,
+      resetAt,
+      remaining: Math.max(0, limit - used),
+      agotado: used >= limit,
+    };
+  } catch (err) {
+    console.warn('[usage] No se pudo leer contador de PDFs:', err);
+    return {
+      userId,
+      used: 0,
+      limit,
+      resetAt: endOfMonth().toISOString(),
+      remaining: limit,
+      agotado: false,
+    };
+  }
+}
+
+export async function recordPdf(userId: string): Promise<PdfCounterSnapshot> {
+  const key = pdfKey(userId);
+  const ttlMs = endOfMonth().getTime() - Date.now();
+  try {
+    const stored = await storage.get<{ used: number; resetAt: string }>(key);
+    let current = stored ?? { used: 0, resetAt: endOfMonth().toISOString() };
+    if (new Date(current.resetAt).getTime() < Date.now()) {
+      current = { used: 0, resetAt: endOfMonth().toISOString() };
+    }
+    current.used += 1;
+    await storage.set(key, current, Math.ceil(ttlMs / 1000));
+  } catch (err) {
+    console.warn('[usage] No se pudo registrar PDF:', err);
+  }
+  return getPdfCounter(userId);
+}
