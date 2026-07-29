@@ -24,6 +24,8 @@ import {
   enviarChatStream,
   type ChatClientError,
 } from '@/lib/chat/client';
+import { CuotaBar } from '@/components/usage/CuotaBar';
+import { useSession } from 'next-auth/react';
 import {
   parseListaPrecios,
   MAX_PRECIOS_PROPIOS,
@@ -96,10 +98,13 @@ export default function Chat() {
     truncado: boolean;
   } | null>(null);
   const [ultimoInput, setUltimoInput] = useState<string | null>(null);
+  const [cuotaRefreshKey, setCuotaRefreshKey] = useState(0);
   const finRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const { data: session } = useSession();
+  const sesionActiva = !!session?.user;
 
   useEffect(() => {
     finRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -205,6 +210,8 @@ export default function Chat() {
         abortRef.current = null;
       }
       setCargando(false);
+      // Refrescar la cuota despues de cada turno (servidor registro el uso).
+      setCuotaRefreshKey((k) => k + 1);
     }
   };
 
@@ -534,6 +541,7 @@ export default function Chat() {
         <p className="chat-disclaimer">
           El asistente puede equivocarse. Verificá los datos críticos de obra.
         </p>
+        <CuotaBar signedIn={!!sesionActiva} refreshKey={cuotaRefreshKey} />
       </form>
 
       <style jsx>{`

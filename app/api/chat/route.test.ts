@@ -30,6 +30,11 @@ vi.mock('@/lib/tools/ejecutar', () => ({
   ejecutarTool: (...args: unknown[]) => ejecutarTool(...args),
 }));
 
+const authMock = vi.fn();
+vi.mock('@/lib/auth', () => ({
+  auth: (...args: unknown[]) => authMock(...args),
+}));
+
 import { POST } from './route';
 
 // --- Helpers ---

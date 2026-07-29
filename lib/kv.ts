@@ -50,11 +50,22 @@ export const storage = {
     }
   },
 
-  async set(key: string, value: unknown): Promise<void> {
+  async set(
+    key: string,
+    value: unknown,
+    /** TTL en segundos. Solo aplica a Vercel KV (no al fallback in-memory). */
+    exSeconds?: number
+  ): Promise<void> {
     try {
       const raw = JSON.stringify(value);
       if (IS_KV) {
-        await kv.set(key, raw);
+        // Vercel kv.set soporta TTL como tercer argumento (en segundos).
+        // El overload sin TTL genera un item persistente.
+        if (exSeconds) {
+          await kv.set(key, raw, { ex: exSeconds });
+        } else {
+          await kv.set(key, raw);
+        }
       } else {
         await memorySet(key, raw);
       }

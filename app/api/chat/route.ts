@@ -35,6 +35,8 @@ import {
   getIpFromRequest,
   rateLimitResponseHeaders,
 } from '@/lib/rate-limit';
+import { recordUsage, getUsage, usageResponseHeaders } from '@/lib/usage';
+import { auth } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -219,6 +221,25 @@ export async function POST(req: NextRequest) {
         'No pude completar la respuesta (demasiados pasos). Reformulá la consulta, por favor.';
     }
 
+    // Medidor de tokens por usuario (cuota 100k, ver A5 de PLAN-LANZAMIENTO.md).
+    // Solo se trackea si hay userId (auth con Google). Usuarios anonimos usan
+    // solo el rate-limit por IP y consumen la cuota global del sistema.
+    const session = await auth();
+    const userId = session?.user?.id;
+    const usageHeaders: Record<string, string> = {};
+    if (userId) {
+      const usage = await recordUsage({
+        userId,
+        action: 'chat',
+        usage: {
+          input_tokens: inputTokens,
+          output_tokens: outputTokens,
+          cache_read_input_tokens: cacheRead,
+        },
+      });
+      Object.assign(usageHeaders, usageResponseHeaders(usage));
+    }
+
     return NextResponse.json(
       {
         reply,
@@ -232,7 +253,7 @@ export async function POST(req: NextRequest) {
           cache_creation: cacheCreation,
         },
       },
-      { headers: rateLimitResponseHeaders(rl) }
+      { headers: { ...rateLimitResponseHeaders(rl), ...usageHeaders } }
     );
   } catch (err) {
     console.error('[/api/chat] Error:', err);
