@@ -1,9 +1,11 @@
-import { Editor } from '@/components/editor/Editor';
-import { editorStateFromRequest, type EditorState } from '@/lib/editor-types';
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { getProyecto, saveProyecto, type ProyectoGuardado } from '@/lib/db/proyectos';
 import { renderPresentacionDarkGold } from '@/lib/templates/presentacion-darkgold';
+import { getEntregablePorId } from '@/lib/tools/generar-entregable';
+import { PreviewEntregable } from './preview-entregable';
+import { Editor } from '@/components/editor/Editor';
+import { editorStateFromRequest, type EditorState } from '@/lib/editor-types';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,6 +15,14 @@ export default async function PreviewPage({ params }: { params: { id: string } }
     redirect(`/login?callbackUrl=/preview/${params.id}`);
   }
 
+  // 1. Si el id es un entregable generado por el chat, lo mostramos en un
+  // viewer simple (read-only) con boton de descarga PDF.
+  const entregable = getEntregablePorId(params.id);
+  if (entregable) {
+    return <PreviewEntregable html={entregable.html} filename={entregable.filename} id={params.id} />;
+  }
+
+  // 2. Si es un proyecto guardado del editor, lo abrimos en el editor.
   const existingProyecto = await getProyecto(params.id);
 
   let initialState: EditorState;
@@ -36,22 +46,11 @@ export default async function PreviewPage({ params }: { params: { id: string } }
         año: '2026',
         estado: 'Proyecto ejecutivo',
         email: 'demo@example.com',
-        telefono: '+54 381 555 1234',
-        direccion: 'Av. Demo 1234',
-        web: 'demo.com',
-        instagram: '@demo',
-        linkedin: 'https://linkedin.com/in/demo',
-        twitter: 'https://x.com/demo',
-        facebook: 'https://facebook.com/demo',
       },
       branding: {
         empresa_nombre: 'Estudio Demo',
         estilo: 'premium',
         color_primario: '#C9A84C',
-        color_secundario: '#8a7434',
-        color_fondo: '#080808',
-        color_texto: '#ede9e0',
-        color_acento: '#E5C66B',
       },
       archivos: { galeria: [] },
       opciones: {},
