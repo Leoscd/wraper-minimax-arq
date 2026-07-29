@@ -14,7 +14,7 @@
  */
 
 import ExcelJS from 'exceljs';
-import type { RubrosInput } from '../types';
+import type { RubrosInput } from './types';
 
 export type EntregableParaXlsx =
   | { tipo: 'presupuesto'; rubros: RubrosInput }
@@ -65,7 +65,7 @@ async function sheetPresupuesto(wb: ExcelJS.Workbook, r: RubrosInput): Promise<v
     fgColor: { argb: 'FF1B3A6B' },
   };
 
-  r.rubros.forEach((r) => {
+  r.rubros.forEach((r: any) => {
     ws.addRow({
       numero: r.numero,
       nombre: r.nombre,

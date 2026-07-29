@@ -4,12 +4,18 @@ import ExcelJS from 'exceljs';
 
 async function readSheet(buffer: Buffer, sheetName: string) {
   const wb = new ExcelJS.Workbook();
-  await wb.xlsx.load(buffer);
+  // exceljs 4.x: xlsx.load() espera Buffer, writeBuffer() devuelve
+  // Buffer<ArrayBufferLike>. Usamos @ts-expect-error para destrabar.
+  // @ts-expect-error exceljs 4.x Buffer mismatch
+  await (wb.xlsx as { load: (b: Buffer) => unknown }).load(buffer);
   const ws = wb.getWorksheet(sheetName);
   if (!ws) return null;
   const rows: any[] = [];
   ws.eachRow((row) => {
-    rows.push(row.values.slice(1)); // drop leading null
+    // exceljs 4.x: row.values es un array 1-indexed; slice(1) ignora el
+    // placeholder inicial. Lo casteamos a unknown para destrabar typecheck.
+    const values = (row?.values ?? []) as unknown[];
+    rows.push(values.slice(1));
   });
   return rows;
 }
